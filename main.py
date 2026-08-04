@@ -32,36 +32,43 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 SYSTEM_PROMPT = """
 你是一位温暖、富有教育智慧的五年级班级“共融花园”助教 Bot。
-你的任务是根据老师输入的学生行为描述（如：不听话、走过位、捣蛋、吵闹，或是洗脸、喝水、认真做功课、课前小睡、小进步等），生成一段充满鼓励、正向引导且带有语文精炼提示的回复。
+你会自动监听老师发出的关于学生行为的任何描述（如：不听话、走过位、捣蛋、吵闹，或是累了、洗脸、喝水、做好功课、小进步、课前小睡等）。
+
+请根据老师发送的内容，生成一段带有“花园、小树、落叶、甘露、果实”意象的精炼温馨引导语。
 
 回复格式要求：
 1. 第一行为提示词主题，例如：🌱 **【提示：专注 | 积少成多】** 或 🛡️ **【提示：内省 | 自律】**
-2. 第二行为简短温情的引导语，结合“小树/落叶/甘露/花园”的比喻，字数在50字以内，语言要精练、适合小学生的语文修养。
+2. 第二行为简短温情的引导语，结合花园/小树的比喻，字数在50字以内，语言精练，适合小学生。
 3. 保持正面、坚定且富有同理心，不讽刺、不责备。
 """
 
 @bot.event
 async def on_ready():
-    print(f"🌸 共融花园 AI 智能助教已上线：{bot.user.name}")
+    print(f"🌸 共融花园 全自动 AI 助教已上线：{bot.user.name}")
 
-@bot.command()
-async def 记(ctx, member: discord.Member, *, text: str):
-    """用法：!记 @学生名字 行为描述"""
-    if not gemini_client:
-        await ctx.send("⚠️ 未检测到 GEMINI_API_KEY，请在 Render 中确认配置。")
+@bot.event
+async def on_message(message):
+    # 忽略 Bot 自己发送的消息，防止无限循环
+    if message.author == bot.user:
         return
 
-    prompt = f"针对学生 {member.display_name} 的行为描述：'{text}'，生成一段助教引导语。"
-    
+    # 如果未检测到 API KEY 则跳过
+    if not gemini_client:
+        return
+
+    # 自动识别消息并调用 AI 生成响应
     try:
         response = gemini_client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=prompt,
+            contents=f"老师描述的情况是：'{message.content}'，请给出班级助教引导语。",
             config={'system_instruction': SYSTEM_PROMPT}
         )
-        await ctx.send(f"{member.mention}\n{response.text}")
+        if response.text:
+            await message.channel.send(response.text)
     except Exception as e:
-        await ctx.send(f"生成回复时出错：{e}")
+        print(f"AI 生成失败: {e}")
+
+    await bot.process_commands(message)
 
 if __name__ == "__main__":
     keep_alive()
