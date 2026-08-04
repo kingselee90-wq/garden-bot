@@ -8,7 +8,7 @@ from flask import Flask
 from threading import Thread
 from google import genai
 import matplotlib
-matplotlib.use('Agg') # 纯后台生成图表，无需桌面环境
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # ----------------- 1. Keep-Alive 网页服务 -----------------
@@ -40,6 +40,13 @@ def init_db():
                     id INTEGER PRIMARY KEY,
                     beast_hp INTEGER DEFAULT 100,
                     dew INTEGER DEFAULT 0
+                )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    student_name TEXT,
+                    action_type TEXT,
+                    leaves_delta INTEGER,
+                    hp_delta INTEGER
                 )''')
     c.execute("INSERT OR IGNORE INTO team (id, beast_hp, dew) VALUES (1, 100, 0)")
     conn.commit()
@@ -86,6 +93,14 @@ def update_team(hp_delta, dew_delta):
     conn.commit()
     conn.close()
 
+def record_history(student_name, action_type, leaves_delta, hp_delta):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT INTO history (student_name, action_type, leaves_delta, hp_delta) VALUES (?, ?, ?, ?)",
+              (student_name, action_type, leaves_delta, hp_delta))
+    conn.commit()
+    conn.close()
+
 def get_all_students():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -109,17 +124,15 @@ def generate_chart_image():
     ax.set_title('Class 13 Leaves Overview (全班树叶实时统计)', fontsize=14, fontweight='bold')
     plt.xticks(rotation=30, ha='right')
     
-    # 柱状图上方显示具体数字
     for bar in bars:
         height = bar.get_height()
         ax.annotate(f'{height}',
                     xy=(bar.get_x() + bar.get_width() / 2, height),
-                    xytext=(0, 3),  # 3 points vertical offset
+                    xytext=(0, 3),
                     textcoords="offset points",
                     ha='center', va='bottom')
 
     plt.tight_layout()
-    
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
@@ -148,7 +161,7 @@ SYSTEM_PROMPT = """
 
 @bot.event
 async def on_ready():
-    print(f"🌸 共融花园实时图表版已上线：{bot.user.name}")
+    print(f"🌸 共融花园高级管理版已上线：{bot.user.name}")
 
 @bot.event
 async def on_message(message):
@@ -159,18 +172,57 @@ async def on_message(message):
     if not content:
         return
 
-    # 1. 重置数据库指令
+    # 1. 数据库重置指令
     if content == "!resetdb":
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
         c.execute("DELETE FROM students")
+        c.execute("DELETE FROM history")
         c.execute("UPDATE team SET beast_hp=100, dew=0 WHERE id=1")
         conn.commit()
         conn.close()
         await message.channel.send("🧹 **数据已重置！New day, new start for all 13 students!**")
         return
 
-    # 2. 随时查看全班状况汇总指令
+    # 2. 批量清屏指令 (!clear)
+    if content == "!clear":
+        try:
+            deleted = await message.channel.purge(limit=25)
+            temp_msg = await message.channel.send(f"🧹 **已成功清理最近 {len(deleted)} 条消息！Channel cleaned!**")
+            import asyncio
+            await asyncio.sleep(3)
+            await temp_msg.delete()
+        except Exception as e:
+            await message.channel.send("⚠️ 清理失败，请确保 Bot 拥有【管理消息 Manage Messages】权限！")
+        return
+
+    # 3. 撤回上一次误操作指令 (!undo)
+    if content == "!undo":
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT id, student_name, action_type, leaves_delta, hp_delta FROM history ORDER BY id DESC LIMIT 1")
+        last_action = c.fetchone()
+        if not last_action:
+            conn.close()
+            await message.channel.send("⚠️ 没有找到可以撤回的操作！No recent action to undo.")
+            return
+        
+        h_id, s_name, a_type, l_delta, h_delta = last_action
+        # 回滚学生积分
+        if s_name and l_delta != 0:
+            c.execute("UPDATE students SET leaves = leaves - ? WHERE name=?", (l_delta, s_name))
+        # 回滚守护兽血量
+        if h_delta != 0:
+            c.execute("UPDATE team SET beast_hp = MIN(100, MAX(0, beast_hp - ?)) WHERE id=1", (h_delta,))
+        # 删掉历史记录
+        c.execute("DELETE FROM history WHERE id=?", (h_id,))
+        conn.commit()
+        conn.close()
+        
+        await message.channel.send(f"↩️ **已成功撤回上一条记录：** 恢复 {s_name} 的树叶与守护兽血量！Undo successful!")
+        return
+
+    # 4. 随时查看全班状况汇总指令
     if content in ["!status", "!stats", "!总结"]:
         beast_hp, dew = get_team_status()
         all_s = get_all_students()
@@ -184,12 +236,12 @@ async def on_message(message):
             f"🌿 **各同学树叶积分 Student Leaves:**\n"
             f"{student_list_str}\n"
             f"----------------------------------------\n"
-            f"💡 提示：输入 **`!chart`** 可以直接查看柱状图表哦！"
+            f"💡 提示：输入 **`!chart`** 看图表，输入 **`!clear`** 清屏，输入 **`!undo`** 撤回！"
         )
         await message.channel.send(status_reply)
         return
 
-    # 3. 随时生成图表指令
+    # 5. 随时生成图表指令
     if content in ["!chart", "!图表"]:
         buf = generate_chart_image()
         if buf:
@@ -202,7 +254,7 @@ async def on_message(message):
     if not gemini_client:
         return
 
-    # 4. 正常学生表现记录
+    # 6. 正常学生表现记录
     try:
         response = gemini_client.models.generate_content(
             model='gemini-2.5-flash',
@@ -219,15 +271,19 @@ async def on_message(message):
 
         beast_hp, dew = get_team_status()
         status_notice = ""
+        l_delta = 0
+        h_delta = 0
 
         if student_name == "全体同学" or "全体" in student_name or action_type == "TEAM_WATER":
             update_team(hp_delta=5, dew_delta=10)
             beast_hp, dew = get_team_status()
+            h_delta = 5
             status_notice = f"💧 **【全班共融 Team Water】** 13位同学齐心协力！Class Dew +10% | Beast HP +5!"
         else:
             leaves, warnings = get_student(student_name)
             if action_type == "GOOD":
                 update_student(student_name, leaves_delta=1, warnings_set=0)
+                l_delta = 1
                 leaves += 1
                 status_notice = f"✨ **【个人成长 Personal Growth】** {student_name} 获得 🍃 +1 Leaf! (Total: {leaves})"
 
@@ -242,9 +298,14 @@ async def on_message(message):
                 else:
                     update_student(student_name, leaves_delta=-1, warnings_set=warnings)
                     update_team(hp_delta=-5, dew_delta=0)
+                    l_delta = -1
+                    h_delta = -5
                     leaves = max(0, leaves - 1)
                     beast_hp, dew = get_team_status()
                     status_notice = f"🍂 **【第{warnings}次掉落 Leaf Lost】** {student_name} -1 Leaf! Beast HP -5! (Leaves: {leaves})"
+
+        # 记录到历史中以便随时 !undo 撤回
+        record_history(student_name if student_name != "全体同学" else "Team", action_type, l_delta, h_delta)
 
         team_reward_status = "🎁 **团队大奖 Team Reward:** 具备资格 Qualified (+5 pts)" if beast_hp >= 70 else "⚠️ **团队大奖 Team Reward:** HP < 70, 奖项暂时冻结!"
 
@@ -254,7 +315,7 @@ async def on_message(message):
             f"{status_notice}\n"
             f"🐾 **守护兽生命值 Beast HP:** ❤️ {beast_hp}/100 | 💧 **班级甘露 Class Dew:** {dew}%\n"
             f"{team_reward_status}\n"
-            f"*(随时输入 `!status` 看汇总，输入 `!chart` 看柱状图)*"
+            f"*(指令菜单: `!status` 总结 | `!chart` 图表 | `!clear` 清屏 | `!undo` 撤回)*"
         )
 
         await message.channel.send(reply)
