@@ -1,11 +1,15 @@
 import os
 import sqlite3
 import json
+import io
 import discord
 from discord.ext import commands
 from flask import Flask
 from threading import Thread
 from google import genai
+import matplotlib
+matplotlib.use('Agg') # 纯后台生成图表，无需桌面环境
+import matplotlib.pyplot as plt
 
 # ----------------- 1. Keep-Alive 网页服务 -----------------
 app = Flask('')
@@ -82,7 +86,47 @@ def update_team(hp_delta, dew_delta):
     conn.commit()
     conn.close()
 
-# ----------------- 3. AI Client & Bot 初始化 -----------------
+def get_all_students():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT name, leaves FROM students ORDER BY leaves DESC")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+# ----------------- 3. 图表生成函数 -----------------
+def generate_chart_image():
+    data = get_all_students()
+    if not data:
+        return None
+    names = [row[0] for row in data]
+    leaves = [row[1] for row in data]
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    bars = ax.bar(names, leaves, color='#4CAF50')
+    ax.set_xlabel('Students (同学)', fontsize=12)
+    ax.set_ylabel('Leaves (树叶数)', fontsize=12)
+    ax.set_title('Class 13 Leaves Overview (全班树叶实时统计)', fontsize=14, fontweight='bold')
+    plt.xticks(rotation=30, ha='right')
+    
+    # 柱状图上方显示具体数字
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(f'{height}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
+
+    plt.tight_layout()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close(fig)
+    return buf
+
+# ----------------- 4. AI Client & Bot 初始化 -----------------
 gemini_client = None
 gemini_api_key = os.getenv("GEMINI_API_KEY")
 if gemini_api_key:
@@ -104,7 +148,7 @@ SYSTEM_PROMPT = """
 
 @bot.event
 async def on_ready():
-    print(f"🌸 共融花园稳定版已上线：{bot.user.name}")
+    print(f"🌸 共融花园实时图表版已上线：{bot.user.name}")
 
 @bot.event
 async def on_message(message):
@@ -115,6 +159,7 @@ async def on_message(message):
     if not content:
         return
 
+    # 1. 重置数据库指令
     if content == "!resetdb":
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -125,9 +170,39 @@ async def on_message(message):
         await message.channel.send("🧹 **数据已重置！New day, new start for all 13 students!**")
         return
 
+    # 2. 随时查看全班状况汇总指令
+    if content in ["!status", "!stats", "!总结"]:
+        beast_hp, dew = get_team_status()
+        all_s = get_all_students()
+        student_list_str = "\n".join([f"• {s[0]}: 🍃 {s[1]} 片" for s in all_s]) if all_s else "• 暂无记录 (No records yet)"
+        
+        status_reply = (
+            f"📊 **【全班共融花园实时总结 Class Real-time Status】**\n"
+            f"----------------------------------------\n"
+            f"🐾 **守护兽生命值 Beast HP:** ❤️ {beast_hp}/100\n"
+            f"💧 **班级甘露 Class Dew:** {dew}%\n\n"
+            f"🌿 **各同学树叶积分 Student Leaves:**\n"
+            f"{student_list_str}\n"
+            f"----------------------------------------\n"
+            f"💡 提示：输入 **`!chart`** 可以直接查看柱状图表哦！"
+        )
+        await message.channel.send(status_reply)
+        return
+
+    # 3. 随时生成图表指令
+    if content in ["!chart", "!图表"]:
+        buf = generate_chart_image()
+        if buf:
+            file = discord.File(buf, filename="class_chart.png")
+            await message.channel.send("📊 **全班树叶实时柱状图 Real-time Chart for 13 Students:**", file=file)
+        else:
+            await message.channel.send("📊 目前还没有任何同学的积分记录哦！No records to chart yet.")
+        return
+
     if not gemini_client:
         return
 
+    # 4. 正常学生表现记录
     try:
         response = gemini_client.models.generate_content(
             model='gemini-2.5-flash',
@@ -178,14 +253,14 @@ async def on_message(message):
             f"----------------------------------------\n"
             f"{status_notice}\n"
             f"🐾 **守护兽生命值 Beast HP:** ❤️ {beast_hp}/100 | 💧 **班级甘露 Class Dew:** {dew}%\n"
-            f"{team_reward_status}"
+            f"{team_reward_status}\n"
+            f"*(随时输入 `!status` 看汇总，输入 `!chart` 看柱状图)*"
         )
 
         await message.channel.send(reply)
 
     except Exception as e:
         print(f"处理失败: {e}")
-        # 即使报错也给老师回复，确保绝不哑火
         await message.channel.send(f"🌸 **收到您的记录啦！已为同学们送上关爱与鼓励！✨**")
 
 if __name__ == "__main__":
