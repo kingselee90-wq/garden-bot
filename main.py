@@ -172,7 +172,7 @@ async def on_message(message):
     if not content:
         return
 
-    # 1. 数据库重置指令
+    # ================= 优先拦截专属指令 =================
     if content == "!resetdb":
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -184,7 +184,6 @@ async def on_message(message):
         await message.channel.send("🧹 **数据已重置！New day, new start for all 13 students!**")
         return
 
-    # 2. 批量清屏指令 (!clear)
     if content == "!clear":
         try:
             deleted = await message.channel.purge(limit=25)
@@ -196,7 +195,6 @@ async def on_message(message):
             await message.channel.send("⚠️ 清理失败，请确保 Bot 拥有【管理消息 Manage Messages】权限！")
         return
 
-    # 3. 撤回上一次误操作指令 (!undo)
     if content == "!undo":
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -208,13 +206,10 @@ async def on_message(message):
             return
         
         h_id, s_name, a_type, l_delta, h_delta = last_action
-        # 回滚学生积分
         if s_name and l_delta != 0:
             c.execute("UPDATE students SET leaves = leaves - ? WHERE name=?", (l_delta, s_name))
-        # 回滚守护兽血量
         if h_delta != 0:
             c.execute("UPDATE team SET beast_hp = MIN(100, MAX(0, beast_hp - ?)) WHERE id=1", (h_delta,))
-        # 删掉历史记录
         c.execute("DELETE FROM history WHERE id=?", (h_id,))
         conn.commit()
         conn.close()
@@ -222,39 +217,36 @@ async def on_message(message):
         await message.channel.send(f"↩️ **已成功撤回上一条记录：** 恢复 {s_name} 的树叶与守护兽血量！Undo successful!")
         return
 
-    # 4. 随时查看全班状况汇总指令
-    if content in ["!status", "!stats", "!总结"]:
-        beast_hp, dew = get_team_status()
-        all_s = get_all_students()
-        student_list_str = "\n".join([f"• {s[0]}: 🍃 {s[1]} 片" for s in all_s]) if all_s else "• 暂无记录 (No records yet)"
-        
-        status_reply = (
-            f"📊 **【全班共融花园实时总结 Class Real-time Status】**\n"
-            f"----------------------------------------\n"
-            f"🐾 **守护兽生命值 Beast HP:** ❤️ {beast_hp}/100\n"
-            f"💧 **班级甘露 Class Dew:** {dew}%\n\n"
-            f"🌿 **各同学树叶积分 Student Leaves:**\n"
-            f"{student_list_str}\n"
-            f"----------------------------------------\n"
-            f"💡 提示：输入 **`!chart`** 看图表，输入 **`!clear`** 清屏，输入 **`!undo`** 撤回！"
-        )
-        await message.channel.send(status_reply)
-        return
-
-    # 5. 随时生成图表指令
-    if content in ["!chart", "!图表"]:
-        buf = generate_chart_image()
-        if buf:
-            file = discord.File(buf, filename="class_chart.png")
-            await message.channel.send("📊 **全班树叶实时柱状图 Real-time Chart for 13 Students:**", file=file)
+    if content in ["!status", "!stats", "!chart", "!图表", "!总结"]:
+        if content in ["!chart", "!图表"]:
+            buf = generate_chart_image()
+            if buf:
+                file = discord.File(buf, filename="class_chart.png")
+                await message.channel.send("📊 **全班树叶实时柱状图 Real-time Chart for 13 Students:**", file=file)
+            else:
+                await message.channel.send("📊 目前还没有任何同学的积分记录哦！No records to chart yet.")
         else:
-            await message.channel.send("📊 目前还没有任何同学的积分记录哦！No records to chart yet.")
+            beast_hp, dew = get_team_status()
+            all_s = get_all_students()
+            student_list_str = "\n".join([f"• {s[0]}: 🍃 {s[1]} 片" for s in all_s]) if all_s else "• 暂无记录 (No records yet)"
+            
+            status_reply = (
+                f"📊 **【全班共融花园实时总结 Class Real-time Status】**\n"
+                f"----------------------------------------\n"
+                f"🐾 **守护兽生命值 Beast HP:** ❤️ {beast_hp}/100\n"
+                f"💧 **班级甘露 Class Dew:** {dew}%\n\n"
+                f"🌿 **各同学树叶积分 Student Leaves:**\n"
+                f"{student_list_str}\n"
+                f"----------------------------------------\n"
+                f"💡 提示：输入 **`!chart`** 看图表，输入 **`!clear`** 清屏，输入 **`!undo`** 撤回！"
+            )
+            await message.channel.send(status_reply)
         return
 
+    # ================= 正常学生行为记录 =================
     if not gemini_client:
         return
 
-    # 6. 正常学生表现记录
     try:
         response = gemini_client.models.generate_content(
             model='gemini-2.5-flash',
@@ -304,7 +296,6 @@ async def on_message(message):
                     beast_hp, dew = get_team_status()
                     status_notice = f"🍂 **【第{warnings}次掉落 Leaf Lost】** {student_name} -1 Leaf! Beast HP -5! (Leaves: {leaves})"
 
-        # 记录到历史中以便随时 !undo 撤回
         record_history(student_name if student_name != "全体同学" else "Team", action_type, l_delta, h_delta)
 
         team_reward_status = "🎁 **团队大奖 Team Reward:** 具备资格 Qualified (+5 pts)" if beast_hp >= 70 else "⚠️ **团队大奖 Team Reward:** HP < 70, 奖项暂时冻结!"
@@ -315,7 +306,7 @@ async def on_message(message):
             f"{status_notice}\n"
             f"🐾 **守护兽生命值 Beast HP:** ❤️ {beast_hp}/100 | 💧 **班级甘露 Class Dew:** {dew}%\n"
             f"{team_reward_status}\n"
-            f"*(指令菜单: `!status` 总结 | `!chart` 图表 | `!clear` 清屏 | `!undo` 撤回)*"
+            f"*(菜单: `!stats` / `!status` 总结 | `!chart` 图表 | `!clear` 清屏 | `!undo` 撤回)*"
         )
 
         await message.channel.send(reply)
