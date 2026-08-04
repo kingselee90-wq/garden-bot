@@ -27,13 +27,11 @@ DB_FILE = "garden.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    # 学生表：学生名、树叶数、警告次数
     c.execute('''CREATE TABLE IF NOT EXISTS students (
                     name TEXT PRIMARY KEY,
                     leaves INTEGER DEFAULT 0,
                     warnings INTEGER DEFAULT 0
                 )''')
-    # 团队表：守护兽生命值(默认100)、班级甘露(0-100)
     c.execute('''CREATE TABLE IF NOT EXISTS team (
                     id INTEGER PRIMARY KEY,
                     beast_hp INTEGER DEFAULT 100,
@@ -95,38 +93,36 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 SYSTEM_PROMPT = """
-你是一位兼具爱心、耐心、包容与公正的五年级班级“共融花园”守护兽 AI 助教（如猫头鹰🦉、小松鼠🐿️）。
-班级共有13位同学，有些同学可能华语不太熟练，大家会互相提醒与包容。
-老师会实名输入学生的表现，请你按 JSON 格式分析：
+你是一位兼具爱心、公正与双语包容的五年级班级“共融花园”守护兽 AI 助教。
+班级有13位同学，有些同学只会简单的英文。
+老师会实名输入表现，请你按 JSON 格式返回：
 
 分析规则：
-1. **学生姓名 (student_name)**：从输入中精准提取被老师点名的实名学生。如果输入中没有具体点名特定个人（或属于全班通用互动/互相提醒），请填写 "全体同学"。
+1. **学生姓名 (student_name)**：提取被老师点名的实名学生。如果没有具体点名，填 "全体同学 (All Students)"。
 2. **行为性质 (action_type)**：
-   - "GOOD": 被点名学生的正向行为（做功课、喝水洗脸、守秩序、互相提醒等）。
-   - "BAD": 被点名学生的违纪行为（走过位、吵闹、打架、欺负同学、大声说话等）。
-   - "TEAM_WATER": 团队合作、互相提醒、全班共同努力或未被单独点名时的通用鼓励。
+   - "GOOD": 正向行为。
+   - "BAD": 违纪行为。
+   - "TEAM_WATER": 团队合作或通用鼓励。
 3. **教育引导语 (message)**：
-   - 必须使用简单、温暖、通俗易懂的华语（字数60字以内），多用表情符号（🦉、🌿、💧），照顾不擅长华语的同学。
-   - 绝不讽刺，充满尊重、爱心与公正。
+   - 必须使用【简短华语 + 简单英文 (Simple English)】双语对照，字数精炼（总共60字以内），多用表情（🦉、🌿、💧）。
 
 返回格式必须是合法 JSON：
 {
-  "student_name": "学生名或全体同学",
+  "student_name": "学生名",
   "action_type": "GOOD" 或 "BAD" 或 "TEAM_WATER",
-  "message": "守护兽的温暖回复"
+  "message": "双语温柔回复，例如：'大家加油！Keep it up, everyone! 🌿'"
 }
 """
 
 @bot.event
 async def on_ready():
-    print(f"🌸 共融花园（13人班级包容版）已上线：{bot.user.name}")
+    print(f"🌸 共融花园双语版已上线：{bot.user.name}")
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
 
-    # 重置数据库指令
     if message.content.strip() == "!resetdb":
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -134,14 +130,13 @@ async def on_message(message):
         c.execute("UPDATE team SET beast_hp=100, dew=0 WHERE id=1")
         conn.commit()
         conn.close()
-        await message.channel.send("🧹 **共融花园数据已全部清空重置！全新一天开始啦，13位同学加油！**")
+        await message.channel.send("🧹 **数据已重置！New day, new start for all 13 students!**")
         return
 
     if not gemini_client:
         return
 
     try:
-        # 调用 AI 分析
         response = gemini_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=f"老师实名输入：'{message.content}'",
@@ -158,41 +153,39 @@ async def on_message(message):
         beast_hp, dew = get_team_status()
         status_notice = ""
 
-        if student_name == "全体同学" or action_type == "TEAM_WATER":
+        if student_name == "全体同学" or "全体" in student_name or action_type == "TEAM_WATER":
             update_team(hp_delta=5, dew_delta=10)
             beast_hp, dew = get_team_status()
-            status_notice = f"💧 **【全班共融浇水】** 13位同学齐心协力！班级甘露增加 10%！守护兽恢复 5 HP！"
+            status_notice = f"💧 **【全班共融 Team Water】** 13位同学齐心协力！Class Dew +10% | Beast HP +5!"
         else:
             leaves, warnings = get_student(student_name)
             if action_type == "GOOD":
                 update_student(student_name, leaves_delta=1, warnings_set=0)
                 leaves += 1
-                status_notice = f"✨ **【个人成长】** {student_name} 获得 🍃 1 片树叶！（当前树叶：{leaves} 片）"
+                status_notice = f"✨ **【个人成长 Personal Growth】** {student_name} 获得 🍃 +1 Leaf! (Total: {leaves})"
 
             elif action_type == "BAD":
                 warnings += 1
                 if warnings == 1:
                     update_student(student_name, leaves_delta=0, warnings_set=1)
-                    status_notice = f"🌱 **【第 1 次温柔提醒】** 守护兽提醒 {student_name}，不扣树叶，请及时纠正哦。（当前树叶：{leaves} 片）"
+                    status_notice = f"🌱 **【第1次温柔提醒 1st Reminder】** 守护兽提醒 {student_name}，不扣树叶 No leaf lost. (Total: {leaves})"
                 elif warnings == 2:
                     update_student(student_name, leaves_delta=0, warnings_set=2)
-                    status_notice = f"⚠️ **【第 2 次爱心警告】** 注意秩序哦！再次违纪将影响守护兽生命值。（当前树叶：{leaves} 片）"
+                    status_notice = f"⚠️ **【第2次爱心警告 2nd Warning】** 注意秩序 Keep order please! (Total: {leaves})"
                 else:
-                    # 第3次及以上：扣除树叶 & 守护兽扣 5 HP
                     update_student(student_name, leaves_delta=-1, warnings_set=warnings)
                     update_team(hp_delta=-5, dew_delta=0)
                     leaves = max(0, leaves - 1)
                     beast_hp, dew = get_team_status()
-                    status_notice = f"🍂 **【第 {warnings} 次掉落树叶】** {student_name} 扣除 🍃 1 片树叶！守护兽生命值 -5 HP！（剩余树叶：{leaves} 片）"
+                    status_notice = f"🍂 **【第{warnings}次掉落 Leaf Lost】** {student_name} -1 Leaf! Beast HP -5! (Leaves: {leaves})"
 
-        # 团队奖励状态
-        team_reward_status = "🎁 **团队大奖：** 具备资格 (+5分/人)" if beast_hp >= 70 else "⚠️ **团队大奖：** 守护兽 HP 低于 70，今日 5 分团队奖暂时冻结！13位同学快互相提醒恢复 HP 吧！"
+        team_reward_status = "🎁 **团队大奖 Team Reward:** 具备资格 Qualified (+5 pts)" if beast_hp >= 70 else "⚠️ **团队大奖 Team Reward:** HP < 70, 奖项暂时冻结 Temporarily locked! 大家加油互相提醒!"
 
         reply = (
             f"{ai_msg}\n"
             f"----------------------------------------\n"
             f"{status_notice}\n"
-            f"🐾 **守护兽生命值：** ❤️ {beast_hp}/100 HP | 💧 **班级甘露：** {dew}%\n"
+            f"🐾 **守护兽生命值 Beast HP:** ❤️ {beast_hp}/100 | 💧 **班级甘露 Class Dew:** {dew}%\n"
             f"{team_reward_status}"
         )
 
