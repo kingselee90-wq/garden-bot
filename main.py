@@ -3,6 +3,7 @@ import threading
 from flask import Flask
 import discord
 from discord.ext import commands
+from google import genai
 
 # ==========================================
 # 🌳 网页端口维持器 (专门用来应付 Render 的检查)
@@ -11,7 +12,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "🌳 Garden Bot is running 24/7!"
+    return "🌳 Garden Bot & Gemini AI is running 24/7!"
 
 def run_web():
     port = int(os.environ.get("PORT", 8080))
@@ -24,6 +25,12 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# 初始化 Google GenAI (自动从 Render 环境变量读取 GEMINI_API_KEY)
+ai_client = None
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if gemini_api_key:
+    ai_client = genai.Client(api_key=gemini_api_key)
 
 @bot.event
 async def on_ready():
@@ -39,7 +46,7 @@ async def on_message(message):
 
     content = message.content.strip()
     
-    # 1. 过位触发
+    # 1. 纪律：过位触发
     if "过位" in content:
         name = content.replace("过位", "").strip() or "同学"
         await message.channel.send(
@@ -50,7 +57,7 @@ async def on_message(message):
         )
         return
 
-    # 2. 心情差触发
+    # 2. 状态：心情差触发
     if "badmood" in content.lower() or "心情差" in content:
         name = content.lower().replace("badmood", "").replace("心情差", "").strip() or "同学"
         await message.channel.send(
@@ -61,7 +68,7 @@ async def on_message(message):
         )
         return
 
-    # 3. 打瞌睡触发
+    # 3. 纪律：打瞌睡触发
     if "打瞌睡" in content:
         name = content.replace("打瞌睡", "").strip() or "同学"
         await message.channel.send(
