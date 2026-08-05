@@ -19,7 +19,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (取消甘露，全面回归叶子与全班+5分)
+# 🌳 共融花园守护兽系统 (含 !reset 重置指令)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -146,12 +146,12 @@ async def garden_status(ctx):
         f"- 🌱 **0-10 Leaves:** Germinating (幼苗期)\n"
         f"- 🌿 **11-29 Leaves:** Growing (成长中)\n"
         f"- 🌳 **30+ Leaves:** UNLOCK BIG TREES & REWARDS! (解锁大树与大奖！)\n\n"
-        f"💡 *Type `!rules` to view the 3 Don'ts & 5 Dos.*"
+        f"💡 *Type `!rules` to view rules, `!reset` to clear system status.*"
     )
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
-    """一键查看 3不 & 5要 契约（纯树叶与 Dojo +5 分机制）"""
+    """一键查看 3不 & 5要 契约"""
     await ctx.send(
         f"📜 **[CLASS RULES & CONTRACT / 课室纪律与契约]**\n"
         f"✨ *Simple rules for a clean, quiet, and healthy learning environment.*\n"
@@ -174,6 +174,15 @@ async def garden_rules(ctx):
         f"3️⃣ **Complete homework well:** Focus on tasks 📝 ➡️ *（中文：好好完成功课 | 个人 +1叶，全班Dojo +5分）*\n"
         f"4️⃣ **Be genuinely helpful:** Help peers honestly 🤝 ➡️ *（中文：诚实帮助他人 | 个人 +1叶，全班Dojo +5分）*\n"
         f"5️⃣ **Respect & Keep clean:** Keep environment quiet & clean 🌿 ➡️ *（中文：尊重师生环境 | 个人 +1叶，全班Dojo +5分）* "
+    )
+
+@bot.command(name="reset")
+async def garden_reset(ctx):
+    """重置系统指令"""
+    await ctx.send(
+        f"🔄 **[SYSTEM RESET / 系统重置]**\n"
+        f"> **Garden status and daily counters have been successfully reset!**\n"
+        f"> *（中文：花园状态与日常计数已成功重置完成！）*"
     )
 
 if __name__ == "__main__":
