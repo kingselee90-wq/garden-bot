@@ -20,7 +20,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (全智能模糊匹配版)
+# 🌳 共融花园守护兽系统 (超稳定核心词识别版)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -34,42 +34,52 @@ if gemini_api_key:
 
 student_data = {}
 
-def clean_name_and_extract_action(content):
+def parse_message(content):
     """
-    智能分析老师的输入：
-    自动从一句话中分离出【学生名字】和【行为动作】
+    超稳定解析：
+    直接抓取核心违规或正向动作，并把名字干净剥离
     """
-    # 所有的关键词列表（违规 + 正向）
-    all_keywords = [
-        "吵闹", "过位", "打架", "闹情绪", "不做功课", "没交功课", "讲话",
-        "喝水", "小睡", "打瞌睡", "完成功课", "好功课", "帮忙", "帮助", "尊重", "守规矩", "干净", "安静", "乖"
-    ]
+    content_lower = content.lower()
     
-    matched_keyword = None
-    for kw in all_keywords:
-        if kw in content:
-            matched_keyword = kw
+    # ❌ 违规核心词（扣叶子）
+    violation_keywords = ["吵闹", "过位", "打架", "情绪", "功课", "讲话"]
+    # ✅ 正向核心词（加叶子）
+    positive_keywords = ["喝水", "小睡", "打瞌睡", "帮忙", "帮助", "尊重", "安静", "乖"]
+
+    matched_kw = None
+    is_violation = True
+
+    # 先检查违规词
+    for kw in violation_keywords:
+        if kw in content_lower:
+            matched_kw = kw
+            is_violation = True
             break
             
-    if not matched_keyword:
+    # 如果没有违规词，再检查正向词
+    if not matched_kw:
+        for kw in positive_keywords:
+            if kw in content_lower:
+                matched_kw = kw
+                is_violation = False
+                break
+
+    if not matched_kw:
         return None, None, None
 
-    # 提取名字：把关键词和常见口语助词、副词从原话中剔除
+    # 提取纯名字：把核心词和多余的描述性词汇全部去掉
     name = content
-    for kw in all_keywords:
+    for kw in violation_keywords + positive_keywords:
         name = name.replace(kw, "")
         
-    for stop_word in ["不要", "要", "请", "别", "去", "了", "很", "太", "没有", "没", "不"]:
+    for stop_word in ["不要", "要", "请", "别", "去", "了", "很", "太", "没有", "没", "不", "欺骗", "老师", "说", "的"]:
         name = name.replace(stop_word, "")
         
     name = name.strip()
     if not name:
         name = "student"
 
-    # 判断是违规(Negative)还是正向(Positive)
-    is_violation = matched_keyword in ["吵闹", "过位", "打架", "闹情绪", "不做功课", "没交功课", "讲话"]
-    
-    return name, matched_keyword, is_violation
+    return name, matched_kw, is_violation
 
 async def save_data_to_discord(channel):
     """后台静默更新云端存档（不刷屏）"""
@@ -118,8 +128,7 @@ async def on_message(message):
 
     content = message.content.strip()
     
-    # 调动智能解析函数
-    name, keyword, is_violation = clean_name_and_extract_action(content)
+    name, keyword, is_violation = parse_message(content)
 
     if name and keyword:
         if is_violation:
@@ -146,7 +155,7 @@ async def on_message(message):
             )
         else:
             # ------------------------------------------
-            # ✅ 正向行为增加树叶
+            # ✅ 正向增加树叶
             # ------------------------------------------
             student_data[name] = student_data.get(name, 0) + 1
             leaves = student_data[name]
@@ -169,14 +178,13 @@ async def on_message(message):
         return
 
     # ------------------------------------------
-    # 💙 情绪调节（支持单独输入）
+    # 💙 情绪调节
     # ------------------------------------------
-    if "badmood" in content.lower() or "心情差" in content:
-        name = content.replace("心情差", "").replace("badmood", "").strip() or "同学"
+    if "badmood" in content.lower():
         await message.channel.send(
             f"💙 **[ENERGY RESET / 情绪重置]**\n"
-            f"> **{name}, take a deep breath and relax.**\n"
-            f"> *（中文：{name}，深呼吸调整一下状态）*"
+            f"> **Take a deep breath and relax.**\n"
+            f"> *（中文：深呼吸调整一下状态）*"
         )
         return
 
@@ -186,25 +194,15 @@ async def on_message(message):
 async def garden_status(ctx):
     await ctx.send(
         f"🌳 **[GARDEN STATUS / 花园状态]**\n"
-        f"🟢 **System Online | 24小时智能模糊识别已开启**\n"
-        f"📊 **Leaf Milestones / 培植成长规则:**\n"
-        f"- 🌱 **0-10 Leaves:** 幼苗期 (Germinating)\n"
-        f"- 🌿 **11-29 Leaves:** 成长中 (Growing)\n"
-        f"- 🌳 **30+ Leaves:** 解锁参天大树与大奖！(Big Tree Unlocked!)\n\n"
-        f"💡 *Type `!rules` for rules, `!reset` to clear archive.*"
+        f"🟢 **System Online | 超稳定核心词识别已就绪**"
     )
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
     await ctx.send(
         f"📜 **[CLASS RULES & CONTRACT / 课室纪律与契约]**\n"
-        f"✨ *支持自由语句输入，只要包含核心词即可自动识别！*"
-    )
-    await ctx.send(
-        f"❌ **三不监控（扣除树叶）:** `吵闹`、`过位`、`打架`、`闹情绪`、`不做功课`、`讲话`"
-    )
-    await ctx.send(
-        f"✅ **五要监控（培植树叶）:** `喝水`、`小睡`、`完成功课`、`帮忙`、`尊重/安静`"
+        f"❌ **违规词:** `吵闹`、`过位`、`打架`、`情绪`、`功课`、`讲话`\n"
+        f"✅ **正向词:** `喝水`、`小睡`、`帮忙`、`尊重`、`安静`"
     )
 
 @bot.command(name="reset")
@@ -214,8 +212,8 @@ async def garden_reset(ctx):
     await save_data_to_discord(ctx.channel)
     await ctx.send(
         f"🔄 **[GARDEN ARCHIVE RESET / 云端存档重置]**\n"
-        f"> **All student leaves and tree data have been completely reset!**\n"
-        f"> *（中文：所有学生的树叶与小树成长数据已全部清空重置！）*"
+        f"> **All student data reset successfully!**\n"
+        f"> *（中文：所有学生数据已成功清空重置！）*"
     )
 
 if __name__ == "__main__":
