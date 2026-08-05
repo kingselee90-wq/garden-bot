@@ -20,7 +20,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (Discord 频道永久存档机制 + 丰富违规词)
+# 🌳 共融花园守护兽系统 (含加减树叶统计与云端存档)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -61,7 +61,7 @@ async def load_data_from_discord(channel):
 async def on_ready():
     print(f"==========================================")
     print(f" 🌳 守护兽花圃系统已成功启动：{bot.user.name}")
-    print(f" 🟢 状态：24小时在线中（Discord 云端存档已就绪）")
+    print(f" 🟢 状态：24小时在线中（云端存档已就绪）")
     print(f"==========================================")
     for guild in bot.guilds:
         for channel in guild.text_channels:
@@ -77,42 +77,50 @@ async def on_message(message):
     content = message.content.strip()
     
     # ------------------------------------------
-    # ❌ 三不违规监控（扩充了“讲话”、“吵闹”、“安静”等词汇）
+    # ❌ 三不违规监控（扣除树叶 & 统计扣减）
     # ------------------------------------------
+    violation_type = None
     if any(word in content for word in ["吵闹", "讲话", "安静", "不要讲"]):
-        # 自动提取名字（把违规词去掉剩下的就是名字）
         name = content
         for w in ["吵闹", "讲话", "安静", "不要讲话", "不要讲", "别讲"]:
             name = name.replace(w, "")
         name = name.strip() or "student"
-        
-        await message.channel.send(
-            f"🚫 **[KEEP QUIET / 保持安静]**\n"
-            f"> **{name}, do not make noise or talk!**\n"
-            f"> *（中文：{name}，请保持安静，不要讲话！）*"
-        )
-        return
-
-    if "过位" in content:
+        violation_type = "Noise / Talking (吵闹讲话)"
+    elif "过位" in content:
         name = content.replace("过位", "").strip() or "student"
-        await message.channel.send(
-            f"🚫 **[STAY IN YOUR SEAT / 请回到座位]**\n"
-            f"> **{name}, do not wander around!**\n"
-            f"> *（中文：{name}，不可以走过位！）*"
-        )
-        return
+        violation_type = "Wandering / Over-seat (走过位)"
+    elif "功课" in content and ("不" in content or "没" in content or "拖" in content):
+        name = content
+        for w in ["功课", "不", "没", "拖"]:
+            name = name.replace(w, "")
+        name = name.strip() or "student"
+        violation_type = "Skip Homework (不做功课)"
 
-    if "功课" in content and ("不" in content or "没" in content or "拖" in content):
-        name = content.replace("功课", "").replace("不", "").replace("没", "").replace("拖", "").strip() or "student"
+    if violation_type and name:
+        # 扣除 1 片树叶（最低归零）
+        current_leaves = student_data.get(name, 0)
+        new_leaves = max(0, current_leaves - 1)
+        student_data[name] = new_leaves
+
+        if new_leaves <= 10:
+            tree_status = "🌱 幼苗期 (Germinating)"
+        elif new_leaves < 30:
+            tree_status = "🌿 成长中 (Growing)"
+        else:
+            tree_status = "🌳 参天大树 (Big Tree)"
+
         await message.channel.send(
-            f"🚫 **[COMPLETE HOMEWORK / 按时完成功课]**\n"
-            f"> **{name}, do not skip your homework!**\n"
-            f"> *（中文：{name}，不可以不做功课！）*"
+            f"🚫 **[RULE VIOLATION / 违规扣除]**\n"
+            f"> **{name}, {violation_type}!**\n"
+            f"> 🔻 **Lose 1 Leaf & Free Time Frozen (-1 Leaf)** 🍃 Total Leaves: **{new_leaves}**\n"
+            f"> 🌲 Growth Status: **{tree_status}**\n"
+            f"> *（中文：{name}触犯【三不】规则！扣除 1 片树叶 & 冻结自由 | 目前总叶数: {new_leaves}）*"
         )
+        await save_data_to_discord(message.channel)
         return
 
     # ------------------------------------------
-    # ✅ 五要正向行为监控（自动累积 + 触发存档）
+    # ✅ 五要正向行为监控（累加树叶 & 统计更新）
     # ------------------------------------------
     action_type = None
     if "喝水" in content:
@@ -138,7 +146,7 @@ async def on_message(message):
         if leaves <= 10:
             tree_status = "🌱 幼苗期 (Germinating)"
         elif leaves < 30:
-            tree_status = "🌿 成长中 (Growing)"
+            tree_status = "🌿 成常中 (Growing)"
         else:
             tree_status = "🌳 参天大树解锁！(Big Tree Unlocked!)"
 
@@ -188,11 +196,11 @@ async def garden_rules(ctx):
     )
     
     await ctx.send(
-        f"❌ **THE 3 DON'TS / 三不（失去树叶与自由）**\n"
+        f"❌ **THE 3 DON'TS / 三不（扣除树叶与冻结自由）**\n"
         f"━━━━━━━━━━━━━━━━━━━\n"
-        f"1️⃣ **DO NOT make noise / talk** ➡️ *(中文：不可以吵闹、讲话)*\n"
-        f"2️⃣ **DO NOT wander around** ➡️ *(中文：不可以走过位)*\n"
-        f"3️⃣ **DO NOT skip homework** ➡️ *(中文：不可以不做功课)*"
+        f"1️⃣ **DO NOT make noise / talk** ➡️ *(中文：不可以吵闹、讲话 ➡️ 扣叶子)*\n"
+        f"2️⃣ **DO NOT wander around** ➡️ *(中文：不可以走过位 ➡️ 扣叶子)*\n"
+        f"3️⃣ **DO NOT skip homework** ➡️ *(中文：不可以不做功课 ➡️ 扣叶子)*"
     )
     
     await ctx.send(
