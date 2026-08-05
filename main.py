@@ -20,7 +20,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (Discord 频道永久存档机制)
+# 🌳 共融花园守护兽系统 (Discord 频道永久存档机制 + 丰富违规词)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -36,9 +36,8 @@ if gemini_api_key:
 student_data = {}
 
 async def save_data_to_discord(channel):
-    """将当前所有学生的分数打包成一段 JSON 密文，发送到 Discord 频道作为永恒存档"""
+    """将当前所有学生的分数打包成 JSON，发送到 Discord 频道作为永恒存档"""
     data_str = json.dumps(student_data, ensure_ascii=False)
-    # 用一个特殊的标记包裹，方便 Bot 以后重启时自动读取
     await channel.send(f"📂 **[GARDEN_ARCHIVE_DATA]**\n```{data_str}```")
 
 async def load_data_from_discord(channel):
@@ -47,7 +46,6 @@ async def load_data_from_discord(channel):
     try:
         async for message in channel.history(limit=50):
             if message.author == bot.user and "[GARDEN_ARCHIVE_DATA]" in message.content:
-                # 提取代码块中的 JSON 数据
                 content = message.content
                 json_start = content.find("```") + 3
                 json_end = content.rfind("```")
@@ -65,7 +63,6 @@ async def on_ready():
     print(f" 🌳 守护兽花圃系统已成功启动：{bot.user.name}")
     print(f" 🟢 状态：24小时在线中（Discord 云端存档已就绪）")
     print(f"==========================================")
-    # 启动时自动尝试从当前服务器的所有文本频道恢复数据
     for guild in bot.guilds:
         for channel in guild.text_channels:
             if channel.permissions_for(guild.me).read_message_history:
@@ -80,14 +77,19 @@ async def on_message(message):
     content = message.content.strip()
     
     # ------------------------------------------
-    # ❌ 三不违规监控
+    # ❌ 三不违规监控（扩充了“讲话”、“吵闹”、“安静”等词汇）
     # ------------------------------------------
-    if "吵闹" in content:
-        name = content.replace("吵闹", "").strip() or "student"
+    if any(word in content for word in ["吵闹", "讲话", "安静", "不要讲"]):
+        # 自动提取名字（把违规词去掉剩下的就是名字）
+        name = content
+        for w in ["吵闹", "讲话", "安静", "不要讲话", "不要讲", "别讲"]:
+            name = name.replace(w, "")
+        name = name.strip() or "student"
+        
         await message.channel.send(
             f"🚫 **[KEEP QUIET / 保持安静]**\n"
-            f"> **{name}, do not make noise!**\n"
-            f"> *（中文：{name}，不可以吵闹！）*"
+            f"> **{name}, do not make noise or talk!**\n"
+            f"> *（中文：{name}，请保持安静，不要讲话！）*"
         )
         return
 
@@ -130,11 +132,9 @@ async def on_message(message):
         action_type = "Respect & Clean (尊重整洁)"
 
     if action_type and name:
-        # 1. 内存中加分
         student_data[name] = student_data.get(name, 0) + 1
         leaves = student_data[name]
         
-        # 2. 判定小树变大树等级
         if leaves <= 10:
             tree_status = "🌱 幼苗期 (Germinating)"
         elif leaves < 30:
@@ -142,7 +142,6 @@ async def on_message(message):
         else:
             tree_status = "🌳 参天大树解锁！(Big Tree Unlocked!)"
 
-        # 3. 发送双语卡片
         await message.channel.send(
             f"✨ **[{action_type.upper()}]**\n"
             f"> **{name}, great job! (+1 Leaf)** 🍃 Total Leaves: **{leaves}**\n"
@@ -150,7 +149,6 @@ async def on_message(message):
             f"> *（中文：{name}表现优秀！个人 +1 树叶 | 总叶数: {leaves} | 状态: {tree_status}）*"
         )
 
-        # 4. 自动把最新数据存档到 Discord 频道中
         await save_data_to_discord(message.channel)
         return
 
@@ -172,7 +170,7 @@ async def on_message(message):
 async def garden_status(ctx):
     await ctx.send(
         f"🌳 **[GARDEN STATUS / 花园状态]**\n"
-        f"🟢 **System Online | 守护兽24小时在线（Discord 云端存档已开启）**\n"
+        f"🟢 **System Online | 守护兽24小时在线（云端存档已开启）**\n"
         f"📊 **Leaf Milestones / 培植成长规则:**\n"
         f"- 🌱 **0-10 Leaves:** 幼苗期 (Germinating)\n"
         f"- 🌿 **11-29 Leaves:** 成长中 (Growing)\n"
@@ -192,7 +190,7 @@ async def garden_rules(ctx):
     await ctx.send(
         f"❌ **THE 3 DON'TS / 三不（失去树叶与自由）**\n"
         f"━━━━━━━━━━━━━━━━━━━\n"
-        f"1️⃣ **DO NOT make noise** ➡️ *(中文：不可以吵闹)*\n"
+        f"1️⃣ **DO NOT make noise / talk** ➡️ *(中文：不可以吵闹、讲话)*\n"
         f"2️⃣ **DO NOT wander around** ➡️ *(中文：不可以走过位)*\n"
         f"3️⃣ **DO NOT skip homework** ➡️ *(中文：不可以不做功课)*"
     )
@@ -212,7 +210,6 @@ async def garden_reset(ctx):
     """只有当您主动输入 !reset 时，才会清空所有存档"""
     global student_data
     student_data.clear()
-    # 同时在频道发一条清空后的存档
     await save_data_to_discord(ctx.channel)
     await ctx.send(
         f"🔄 **[GARDEN ARCHIVE RESET / 云端存档重置]**\n"
