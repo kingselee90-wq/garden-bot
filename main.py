@@ -70,7 +70,7 @@ async def on_message(message):
         await message.channel.send(
             f"# 💧 能量补充 / ENERGY BOOST\n\n"
             f"**{name}，去洗个脸，精神焕发再出发！**\n"
-            f"*{name}, go wash your face and stay fresh!*-\n\n"
+            f"*{name}, go wash your face and stay fresh!*\n\n"
             f"🦊 *(守护兽提醒：自我调节最棒了 / Guardian says: Self-care is great)*"
         )
         return
@@ -91,6 +91,9 @@ async def garden_status(ctx):
         f"目标门槛：`30 片叶子` ➡️ 解锁男女专属大树与个性卡通形象！"
     )
 
-# 启动 Bot (请把 "YOUR_DISCORD_BOT_TOKEN" 换成您自己的 Bot Token)
-# token = os.getenv("DISCORD_TOKEN")
-# bot.run(token)
+# 启动 Bot (安全从 Render 的环境变量中读取 Token)
+token = os.getenv("DISCORD_TOKEN")
+if token:
+    bot.run(token)
+else:
+    print("❌ 错误：未找到 DISCORD_TOKEN 环境变量，请在 Render 后台检查设置！")
