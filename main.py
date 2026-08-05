@@ -19,7 +19,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (全功能双语卡片触发)
+# 🌳 共融花园守护兽系统 (取消甘露，全面回归叶子与全班+5分)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -76,14 +76,14 @@ async def on_message(message):
         return
 
     # ------------------------------------------
-    # ✅ 五要正向行为监控
+    # ✅ 五要正向行为监控（个人 +1 Leaf，全班 Dojo +5 分）
     # ------------------------------------------
     if "喝水" in content:
         name = content.replace("喝水", "").strip() or "student"
         await message.channel.send(
             f"💧 **[STAY HYDRATED / 保持喝水]**\n"
-            f"> **{name}, great job staying hydrated and healthy! (+1 Leaf)**\n"
-            f"> *（中文：{name}，好样的，保持喝水保持健康！+1 树叶）*"
+            f"> **{name}, great job! (+1 Leaf | Class Dojo: +5 Pts)**\n"
+            f"> *（中文：{name}，好样保持喝水！个人 +1 树叶 | 全班 Dojo +5 分）*"
         )
         return
 
@@ -91,8 +91,8 @@ async def on_message(message):
         name = content.replace("小睡", "").replace("打瞌睡", "").strip() or "student"
         await message.channel.send(
             f"💤 **[PRE-CLASS NAP / 课前小睡]**\n"
-            f"> **{name}, taking a short rest to stay fresh!**\n"
-            f"> *（中文：{name}，小睡充电，精神焕发！）*"
+            f"> **{name}, taking a short rest! (+1 Leaf | Class Dojo: +5 Pts)**\n"
+            f"> *（中文：{name}小睡充电！个人 +1 树叶 | 全班 Dojo +5 分）*"
         )
         return
 
@@ -100,8 +100,8 @@ async def on_message(message):
         name = content.replace("完成功课", "").replace("好功课", "").strip() or "student"
         await message.channel.send(
             f"📝 **[HOMEWORK COMPLETED / 认真完成功课]**\n"
-            f"> **{name}, excellent focus on completing tasks! (+1 Leaf)**\n"
-            f"> *（中文：{name}，专心完成功课，太棒了！+1 树叶）*"
+            f"> **{name}, excellent focus! (+1 Leaf | Class Dojo: +5 Pts)**\n"
+            f"> *（中文：{name}专心完成功课！个人 +1 树叶 | 全班 Dojo +5 分）*"
         )
         return
 
@@ -109,8 +109,8 @@ async def on_message(message):
         name = content.replace("帮忙", "").replace("帮助", "").strip() or "student"
         await message.channel.send(
             f"🤝 **[GENUINE HELP / 真诚互助]**\n"
-            f"> **{name}, thank you for helping genuinely! (Earn Team Dew)**\n"
-            f"> *（中文：{name}，谢谢你真诚地帮助大家！获取团队甘露）*"
+            f"> **{name}, thank you for helping genuinely! (+1 Leaf | Class Dojo: +5 Pts)**\n"
+            f"> *（中文：{name}真诚帮助大家！个人 +1 树叶 | 全班 Dojo +5 分）*"
         )
         return
 
@@ -118,8 +118,8 @@ async def on_message(message):
         name = content.replace("尊重", "").replace("守规矩", "").replace("干净", "").strip() or "student"
         await message.channel.send(
             f"🌿 **[RESPECT & CLEAN / 尊重与保持整洁]**\n"
-            f"> **{name}, respecting others and keeping the environment clean!**\n"
-            f"> *（中文：{name}，懂得尊重师生并保持环境安静干净！）*"
+            f"> **{name}, keeping environment clean & respectful! (+1 Leaf | Class Dojo: +5 Pts)**\n"
+            f"> *（中文：{name}保持环境干净整洁！个人 +1 树叶 | 全班 Dojo +5 分）*"
         )
         return
 
@@ -142,7 +142,7 @@ async def garden_status(ctx):
     await ctx.send(
         f"🌳 **[GARDEN STATUS / 花园状态]**\n"
         f"🟢 **System Online | 守护兽24小时在线**\n"
-        f"📊 **Leaf Milestones / 全班树叶进度:**\n"
+        f"📊 **Leaf Milestones / 全班树叶与 Dojo 积分进度:**\n"
         f"- 🌱 **0-10 Leaves:** Germinating (幼苗期)\n"
         f"- 🌿 **11-29 Leaves:** Growing (成长中)\n"
         f"- 🌳 **30+ Leaves:** UNLOCK BIG TREES & REWARDS! (解锁大树与大奖！)\n\n"
@@ -151,7 +151,7 @@ async def garden_status(ctx):
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
-    """一键查看 3不 & 5要 契约"""
+    """一键查看 3不 & 5要 契约（纯树叶与 Dojo +5 分机制）"""
     await ctx.send(
         f"📜 **[CLASS RULES & CONTRACT / 课室纪律与契约]**\n"
         f"✨ *Simple rules for a clean, quiet, and healthy learning environment.*\n"
@@ -167,13 +167,13 @@ async def garden_rules(ctx):
     )
     
     await ctx.send(
-        f"✅ **THE 5 DOS / 五要（获得树叶与自由）**\n"
+        f"✅ **THE 5 DOS / 五要（获得树叶 + 全班 Dojo +5 分）**\n"
         f"━━━━━━━━━━━━━━━━━━━\n"
-        f"1️⃣ **Stay hydrated:** Drink enough water 💧 ➡️ *(中文：保持喝水)*\n"
-        f"2️⃣ **Pre-class nap:** Rest to prevent sleepiness 💤 ➡️ *(中文：课前小睡防打瞌睡)*\n"
-        f"3️⃣ **Complete homework well:** Focus on tasks 📝 ➡️ *(中文：好好完成功课)*\n"
-        f"4️⃣ **Be genuinely helpful:** Help peers honestly 🤝 ➡️ *(中文：诚实帮助同学老师，不虚假)*\n"
-        f"5️⃣ **Respect & Keep clean:** Keep environment quiet & clean 🌿 ➡️ *(中文：尊重师生，保持环境安静干净)*"
+        f"1️⃣ **Stay hydrated:** Drink water 💧 ➡️ *（中文：保持喝水 | 个人 +1叶，全班Dojo +5分）*\n"
+        f"2️⃣ **Pre-class nap:** Rest to prevent sleepiness 💤 ➡️ *（中文：课前小睡 | 个人 +1叶，全班Dojo +5分）*\n"
+        f"3️⃣ **Complete homework well:** Focus on tasks 📝 ➡️ *（中文：好好完成功课 | 个人 +1叶，全班Dojo +5分）*\n"
+        f"4️⃣ **Be genuinely helpful:** Help peers honestly 🤝 ➡️ *（中文：诚实帮助他人 | 个人 +1叶，全班Dojo +5分）*\n"
+        f"5️⃣ **Respect & Keep clean:** Keep environment quiet & clean 🌿 ➡️ *（中文：尊重师生环境 | 个人 +1叶，全班Dojo +5分）* "
     )
 
 if __name__ == "__main__":
