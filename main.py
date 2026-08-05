@@ -19,7 +19,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (精确3不5要 + 纯正双语小卡片)
+# 🌳 共融花园守护兽系统 (全功能双语卡片触发)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -45,7 +45,18 @@ async def on_message(message):
 
     content = message.content.strip()
     
-    # 1. 过位
+    # ------------------------------------------
+    # ❌ 三不违规监控
+    # ------------------------------------------
+    if "吵闹" in content:
+        name = content.replace("吵闹", "").strip() or "student"
+        await message.channel.send(
+            f"🚫 **[KEEP QUIET / 保持安静]**\n"
+            f"> **{name}, do not make noise!**\n"
+            f"> *（中文：{name}，不可以吵闹！）*"
+        )
+        return
+
     if "过位" in content:
         name = content.replace("过位", "").strip() or "student"
         await message.channel.send(
@@ -55,7 +66,66 @@ async def on_message(message):
         )
         return
 
-    # 2. 心情差/badmood
+    if "功课" in content and ("不" in content or "没" in content or "拖" in content):
+        name = content.replace("功课", "").replace("不", "").replace("没", "").replace("拖", "").strip() or "student"
+        await message.channel.send(
+            f"🚫 **[COMPLETE HOMEWORK / 按时完成功课]**\n"
+            f"> **{name}, do not skip your homework!**\n"
+            f"> *（中文：{name}，不可以不做功课！）*"
+        )
+        return
+
+    # ------------------------------------------
+    # ✅ 五要正向行为监控
+    # ------------------------------------------
+    if "喝水" in content:
+        name = content.replace("喝水", "").strip() or "student"
+        await message.channel.send(
+            f"💧 **[STAY HYDRATED / 保持喝水]**\n"
+            f"> **{name}, great job staying hydrated and healthy! (+1 Leaf)**\n"
+            f"> *（中文：{name}，好样的，保持喝水保持健康！+1 树叶）*"
+        )
+        return
+
+    if "小睡" in content or "打瞌睡" in content:
+        name = content.replace("小睡", "").replace("打瞌睡", "").strip() or "student"
+        await message.channel.send(
+            f"💤 **[PRE-CLASS NAP / 课前小睡]**\n"
+            f"> **{name}, taking a short rest to stay fresh!**\n"
+            f"> *（中文：{name}，小睡充电，精神焕发！）*"
+        )
+        return
+
+    if "完成功课" in content or "好功课" in content:
+        name = content.replace("完成功课", "").replace("好功课", "").strip() or "student"
+        await message.channel.send(
+            f"📝 **[HOMEWORK COMPLETED / 认真完成功课]**\n"
+            f"> **{name}, excellent focus on completing tasks! (+1 Leaf)**\n"
+            f"> *（中文：{name}，专心完成功课，太棒了！+1 树叶）*"
+        )
+        return
+
+    if "帮忙" in content or "帮助" in content:
+        name = content.replace("帮忙", "").replace("帮助", "").strip() or "student"
+        await message.channel.send(
+            f"🤝 **[GENUINE HELP / 真诚互助]**\n"
+            f"> **{name}, thank you for helping genuinely! (Earn Team Dew)**\n"
+            f"> *（中文：{name}，谢谢你真诚地帮助大家！获取团队甘露）*"
+        )
+        return
+
+    if "尊重" in content or "守规矩" in content or "干净" in content:
+        name = content.replace("尊重", "").replace("守规矩", "").replace("干净", "").strip() or "student"
+        await message.channel.send(
+            f"🌿 **[RESPECT & CLEAN / 尊重与保持整洁]**\n"
+            f"> **{name}, respecting others and keeping the environment clean!**\n"
+            f"> *（中文：{name}，懂得尊重师生并保持环境安静干净！）*"
+        )
+        return
+
+    # ------------------------------------------
+    # 💙 情绪调节
+    # ------------------------------------------
     if "badmood" in content.lower() or "心情差" in content:
         name = content.lower().replace("badmood", "").replace("心情差", "").strip() or "student"
         await message.channel.send(
@@ -65,21 +135,10 @@ async def on_message(message):
         )
         return
 
-    # 3. 打瞌睡
-    if "打瞌睡" in content or "不洗脸" in content:
-        name = content.replace("打瞌睡", "").replace("不洗脸", "").strip() or "student"
-        await message.channel.send(
-            f"💧 **[STAY AWAKE / 提神醒脑]**\n"
-            f"> **{name}, go wash your face and stay fresh!**\n"
-            f"> *（中文：{name}，去洗个脸防打瞌睡！）*"
-        )
-        return
-
     await bot.process_commands(message)
 
 @bot.command(name="status")
 async def garden_status(ctx):
-    """状态与里程碑看板"""
     await ctx.send(
         f"🌳 **[GARDEN STATUS / 花园状态]**\n"
         f"🟢 **System Online | 守护兽24小时在线**\n"
@@ -92,41 +151,29 @@ async def garden_status(ctx):
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
-    """完美对应老师您的 3不 & 5要，卡片式双语大字呈现"""
-    
-    # 标题卡片
+    """一键查看 3不 & 5要 契约"""
     await ctx.send(
         f"📜 **[CLASS RULES & CONTRACT / 课室纪律与契约]**\n"
         f"✨ *Simple rules for a clean, quiet, and healthy learning environment.*\n"
         f"✨ *（保持干净、安静、健康的学习环境，我们的规矩很简单）*"
     )
     
-    # ❌ 3不卡片 (模拟小图卡视觉)
     await ctx.send(
-        f"❌ **THE 3 DON'TS (Lose Leaves & Free Time) / 三不（失去树叶与自由）**\n"
+        f"❌ **THE 3 DON'TS / 三不（失去树叶与自由）**\n"
         f"━━━━━━━━━━━━━━━━━━━\n"
-        f"1️⃣ **DO NOT make noise** \n"
-        f"👉 *（中文：不可以吵闹）*\n\n"
-        f"2️⃣ **DO NOT wander around (过位)** \n"
-        f"👉 *（中文：不可以走过位）*\n\n"
-        f"3️⃣ **DO NOT skip homework** \n"
-        f"👉 *（中文：不可以不做功课）*"
+        f"1️⃣ **DO NOT make noise** ➡️ *(中文：不可以吵闹)*\n"
+        f"2️⃣ **DO NOT wander around** ➡️ *(中文：不可以走过位)*\n"
+        f"3️⃣ **DO NOT skip homework** ➡️ *(中文：不可以不做功课)*"
     )
     
-    # ✅ 5要卡片 (模拟小图卡视觉)
     await ctx.send(
-        f"✅ **THE 5 DOS (Earn Leaves & Free Time) / 五要（获得树叶与自由）**\n"
+        f"✅ **THE 5 DOS / 五要（获得树叶与自由）**\n"
         f"━━━━━━━━━━━━━━━━━━━\n"
-        f"1️⃣ **Stay hydrated:** Drink enough water 💧 \n"
-        f"👉 *（中文：保持喝水）*\n\n"
-        f"2️⃣ **Pre-class nap:** Rest before class to prevent sleepiness 💤 \n"
-        f"👉 *（中文：课前小睡防打瞌睡）*\n\n"
-        f"3️⃣ **Complete homework well:** Focus and finish tasks 📝 \n"
-        f"👉 *（中文：好好完成功课）*\n\n"
-        f"4️⃣ **Be genuinely helpful:** Help peers and teachers honestly (Not fake) 🤝 \n"
-        f"👉 *（中文：诚实帮助同学老师，不虚假）*\n\n"
-        f"5️⃣ **Respect & Keep clean:** Respect others, keep the environment quiet & clean 🌿 \n"
-        f"👉 *（中文：尊重师生，保持环境安静干净）*"
+        f"1️⃣ **Stay hydrated:** Drink enough water 💧 ➡️ *(中文：保持喝水)*\n"
+        f"2️⃣ **Pre-class nap:** Rest to prevent sleepiness 💤 ➡️ *(中文：课前小睡防打瞌睡)*\n"
+        f"3️⃣ **Complete homework well:** Focus on tasks 📝 ➡️ *(中文：好好完成功课)*\n"
+        f"4️⃣ **Be genuinely helpful:** Help peers honestly 🤝 ➡️ *(中文：诚实帮助同学老师，不虚假)*\n"
+        f"5️⃣ **Respect & Keep clean:** Keep environment quiet & clean 🌿 ➡️ *(中文：尊重师生，保持环境安静干净)*"
     )
 
 if __name__ == "__main__":
