@@ -19,7 +19,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (多卡片大字 + 英文视觉主导)
+# 🌳 共融花园守护兽系统 (精确3不5要 + 纯正双语小卡片)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -49,19 +49,19 @@ async def on_message(message):
     if "过位" in content:
         name = content.replace("过位", "").strip() or "student"
         await message.channel.send(
-            f"# 🌿 SPACE ANCHOR\n"
-            f"### **{name}, please return to your assigned seat immediately.**\n"
-            f"*（中文：{name}，请回到专属座位）*"
+            f"🚫 **[STAY IN YOUR SEAT / 请回到座位]**\n"
+            f"> **{name}, do not wander around!**\n"
+            f"> *（中文：{name}，不可以走过位！）*"
         )
         return
 
-    # 2. 心情差
+    # 2. 心情差/badmood
     if "badmood" in content.lower() or "心情差" in content:
         name = content.lower().replace("badmood", "").replace("心情差", "").strip() or "student"
         await message.channel.send(
-            f"# 💙 EMOTIONAL SAFE HAVEN\n"
-            f"### **{name}, take a deep breath and reset your state.**\n"
-            f"*（中文：{name}，深呼吸，调整状态）*"
+            f"💙 **[ENERGY RESET / 情绪重置]**\n"
+            f"> **{name}, take a deep breath and relax.**\n"
+            f"> *（中文：{name}，深呼吸调整一下状态）*"
         )
         return
 
@@ -69,9 +69,9 @@ async def on_message(message):
     if "打瞌睡" in content or "不洗脸" in content:
         name = content.replace("打瞌睡", "").replace("不洗脸", "").strip() or "student"
         await message.channel.send(
-            f"# 💧 ENERGY RENEWAL\n"
-            f"### **{name}, go wash your face and recharge!**\n"
-            f"*（中文：{name}，去洗个脸充电）*"
+            f"💧 **[STAY AWAKE / 提神醒脑]**\n"
+            f"> **{name}, go wash your face and stay fresh!**\n"
+            f"> *（中文：{name}，去洗个脸防打瞌睡！）*"
         )
         return
 
@@ -79,47 +79,54 @@ async def on_message(message):
 
 @bot.command(name="status")
 async def garden_status(ctx):
-    """大字化状态看板"""
+    """状态与里程碑看板"""
     await ctx.send(
-        f"# 🌳 GARDEN GROWTH STATUS\n"
-        f"### **System Online | Guardian Beast Active**\n"
-        f"📊 **Leaf Milestones / 全班树叶里程碑:**\n"
+        f"🌳 **[GARDEN STATUS / 花园状态]**\n"
+        f"🟢 **System Online | 守护兽24小时在线**\n"
+        f"📊 **Leaf Milestones / 全班树叶进度:**\n"
         f"- 🌱 **0-10 Leaves:** Germinating (幼苗期)\n"
-        f"- 🌿 **11-29 Leaves:** Growing Steadily (成长中)\n"
-        f"- 🌳 **30+ Leaves:** UNLOCK EXCLUSIVE BIG TREES! (解锁专属大树与大奖！)\n\n"
-        f"*Type `!rules` to check the contract.*"
+        f"- 🌿 **11-29 Leaves:** Growing (成长中)\n"
+        f"- 🌳 **30+ Leaves:** UNLOCK BIG TREES & REWARDS! (解锁大树与大奖！)\n\n"
+        f"💡 *Type `!rules` to view the 3 Don'ts & 5 Dos.*"
     )
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
-    """分段发送大字卡片，英文绝对主导，彻底杜绝借口"""
+    """完美对应老师您的 3不 & 5要，卡片式双语大字呈现"""
     
-    # 卡片 1：总契约大标题
+    # 标题卡片
     await ctx.send(
-        f"# 📜 GARDEN RULES & GROWTH CONTRACT\n"
-        f"> **Make independent choices. Take responsibility for your space & freedom.**\n"
-        f"> *（中文总则：自主选择，为自己的空间与自由负责）*"
+        f"📜 **[CLASS RULES & CONTRACT / 课室纪律与契约]**\n"
+        f"✨ *Simple rules for a clean, quiet, and healthy learning environment.*\n"
+        f"✨ *（保持干净、安静、健康的学习环境，我们的规矩很简单）*"
     )
     
-    # 卡片 2：3不（红色警示，英文超大字，华语缩小做对比）
+    # ❌ 3不卡片 (模拟小图卡视觉)
     await ctx.send(
-        f"## ❌ THE 3 'DON'TS' (Lose Leaves & Free Time)\n"
-        f"### **1. Do not leave your seat randomly**\n"
-        f"👉 *Result: Lose Leaves & Free Time Freeze* | *(中文：随意过位 ➡️ 扣树叶 & 冻结自由)*\n\n"
-        f"### **2. Do not avoid emotions or waste focus time**\n"
-        f"👉 *Result: Lose Leaves & Affect Team Dew* | *(中文：逃避情绪 ➡️ 扣树叶 & 影响团队)*\n\n"
-        f"### **3. Do not make excuses like 'I don't understand'**\n"
-        f"👉 *Result: Reset state & Lose daily privileges* | *(中文：拒绝借口 ➡️ 失去当日特权)*"
+        f"❌ **THE 3 DON'TS (Lose Leaves & Free Time) / 三不（失去树叶与自由）**\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"1️⃣ **DO NOT make noise** \n"
+        f"👉 *（中文：不可以吵闹）*\n\n"
+        f"2️⃣ **DO NOT wander around (过位)** \n"
+        f"👉 *（中文：不可以走过位）*\n\n"
+        f"3️⃣ **DO NOT skip homework** \n"
+        f"👉 *（中文：不可以不做功课）*"
     )
     
-    # 卡片 3：5要（绿色正向，英文超大字）
+    # ✅ 5要卡片 (模拟小图卡视觉)
     await ctx.send(
-        f"## ✅ THE 5 'DOS' (Earn Leaves & Free Time)\n"
-        f"### **1. Self-Awareness:** Adjust your mood proactively ➡️ **Earn Leaf +1** *(主动调整情绪)*\n"
-        f"### **2. Energy Boost:** Wash your face and stay fresh ➡️ **Earn Leaf +1** *(保持清醒提神)*\n"
-        f"### **3. Space Respect:** Keep your seat and order ➡️ **Earn Team Dew ++** *(维护空间秩序)*\n"
-        f"### **4. Responsibility:** Face challenges without excuses ➡️ **Unlock Milestones** *(勇敢承担成长)*\n"
-        f"### **5. Teamwork:** Protect the garden together (30 Leaves) ➡️ **Unlock Big Tree & Grand Prize!** *(互助共荣大奖)*"
+        f"✅ **THE 5 DOS (Earn Leaves & Free Time) / 五要（获得树叶与自由）**\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"1️⃣ **Stay hydrated:** Drink enough water 💧 \n"
+        f"👉 *（中文：保持喝水）*\n\n"
+        f"2️⃣ **Pre-class nap:** Rest before class to prevent sleepiness 💤 \n"
+        f"👉 *（中文：课前小睡防打瞌睡）*\n\n"
+        f"3️⃣ **Complete homework well:** Focus and finish tasks 📝 \n"
+        f"👉 *（中文：好好完成功课）*\n\n"
+        f"4️⃣ **Be genuinely helpful:** Help peers and teachers honestly (Not fake) 🤝 \n"
+        f"👉 *（中文：诚实帮助同学老师，不虚假）*\n\n"
+        f"5️⃣ **Respect & Keep clean:** Respect others, keep the environment quiet & clean 🌿 \n"
+        f"👉 *（中文：尊重师生，保持环境安静干净）*"
     )
 
 if __name__ == "__main__":
