@@ -19,7 +19,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (双语防借口 + 心理学正向支持)
+# 🌳 共融花园守护兽系统 (多卡片大字 + 英文视觉主导)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -45,36 +45,33 @@ async def on_message(message):
 
     content = message.content.strip()
     
-    # 1. 空间与专注引导（过位 - 严密双语对照）
+    # 1. 过位
     if "过位" in content:
-        name = content.replace("过位", "").strip() or "同学"
+        name = content.replace("过位", "").strip() or "student"
         await message.channel.send(
-            f"# 🌿 【空间锚定 / Space Anchor】\n"
-            f"> ### **{name}，请回到专属座位。**\n"
-            f"> *{name}, please return to your assigned seat immediately.*\n\n"
-            f"🌱 **[守护兽微光 / Guardian Note：找回属于你的专心节奏，每一次调整都是成长 / Reconnect with your focus, every adjustment is growth]**"
+            f"# 🌿 SPACE ANCHOR\n"
+            f"### **{name}, please return to your assigned seat immediately.**\n"
+            f"*（中文：{name}，请回到专属座位）*"
         )
         return
 
-    # 2. 情绪重置（badmood / 心情差 - 双语对照）
+    # 2. 心情差
     if "badmood" in content.lower() or "心情差" in content:
-        name = content.lower().replace("badmood", "").replace("心情差", "").strip() or "同学"
+        name = content.lower().replace("badmood", "").replace("心情差", "").strip() or "student"
         await message.channel.send(
-            f"# 💙 【情感安全港 / Emotional Safe Haven】\n"
-            f"> ### **{name}，允许自己停下，深呼吸调整状态。**\n"
-            f"> *{name}, it is okay to pause and take a deep breath to reset your state.*\n\n"
-            f"✨ **[守护兽微光 / Guardian Note：接纳此刻的感受，我们支持你 / Accept your feelings, we are here to support you]**"
+            f"# 💙 EMOTIONAL SAFE HAVEN\n"
+            f"### **{name}, take a deep breath and reset your state.**\n"
+            f"*（中文：{name}，深呼吸，调整状态）*"
         )
         return
 
-    # 3. 状态调整（打瞌睡 - 双语对照）
+    # 3. 打瞌睡
     if "打瞌睡" in content or "不洗脸" in content:
-        name = content.replace("打瞌睡", "").replace("不洗脸", "").strip() or "同学"
+        name = content.replace("打瞌睡", "").replace("不洗脸", "").strip() or "student"
         await message.channel.send(
-            f"# 💧 【能量唤醒 / Energy Renewal】\n"
-            f"> ### **{name}，去洗个清爽的脸，充充电！**\n"
-            f"> *{name}, go wash your face and recharge your energy.*\n\n"
-            f"🦊 **[守护兽微光 / Guardian Note：照顾好自己，对自己负责 / Take care of yourself and be responsible]**"
+            f"# 💧 ENERGY RENEWAL\n"
+            f"### **{name}, go wash your face and recharge!**\n"
+            f"*（中文：{name}，去洗个脸充电）*"
         )
         return
 
@@ -82,47 +79,48 @@ async def on_message(message):
 
 @bot.command(name="status")
 async def garden_status(ctx):
-    """显示全班树叶里程碑与成长图表（双语防借口）"""
-    chart_view = (
-        f"# 🌳 【共融花园成长图表 / Garden Growth Chart】\n"
-        f"```yaml\n"
-        f"[ 状态 / Status ] 🟢 守护兽花圃系统：24/7 持续在线 (24/7 Online)\n"
-        f"[ 守护 / Guardian ] 🦊 小树与守护兽正在陪伴大家 (Accompanying everyone)\n"
-        f"```\n"
-        f"### 📊 **全班树叶里程碑进度 / Class Leaf Milestones**\n"
-        f"```text\n"
-        f" 🌱 幼苗期 (0-10片 / Leaves)  ➡️ 正在萌芽 / Germinating\n"
-        f" 🌿 成长中 (11-29片 / Leaves) ➡️ 稳步吸收养分 / Growing steadily\n"
-        f" 🌳 大树成林 (30片+ / Leaves) ➡️ 🌟 解锁男女专属大树与个性卡通形象！(Unlock Exclusive Trees)\n"
-        f"```\n"
-        f"🎨 *提示 / Tip：输入 `!rules` 随时查看【3不 & 5要】获得与失去的纪律契约 (Check Rules & Contract).* "
+    """大字化状态看板"""
+    await ctx.send(
+        f"# 🌳 GARDEN GROWTH STATUS\n"
+        f"### **System Online | Guardian Beast Active**\n"
+        f"📊 **Leaf Milestones / 全班树叶里程碑:**\n"
+        f"- 🌱 **0-10 Leaves:** Germinating (幼苗期)\n"
+        f"- 🌿 **11-29 Leaves:** Growing Steadily (成长中)\n"
+        f"- 🌳 **30+ Leaves:** UNLOCK EXCLUSIVE BIG TREES! (解锁专属大树与大奖！)\n\n"
+        f"*Type `!rules` to check the contract.*"
     )
-    await ctx.send(chart_view)
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
-    """一键 Call 出【3不 & 5要】契约，全套严格中英对照，堵死所有借口"""
-    rules_view = (
-        f"# 📜 【共融花园纪律与成长契约 / Rules & Growth Contract】\n"
-        f"🦊 *“自主选择，为自己的空间与自由负责 / Make independent choices, take responsibility for your space & freedom.”*\n\n"
-        f"--- \n\n"
-        f"### ❌ **【3不：失去树叶与 Free Time 的行为 / The 3 'Don'ts': Lose Leaves & Free Time】**\n"
-        f"```diff\n"
-        f"- 1. 不随意离开座位（过位影响秩序）     ➡️ 扣除树叶 & 冻结 Free Time (Lose Leaves & Free Time Freeze)\n"
-        f"- 2. 不逃避情绪或无故荒废专注时间       ➡️ 扣除树叶 & 影响团队甘露 (Lose Leaves & Team Dew Affected)\n"
-        f"- 3. 不推卸责任或以“不懂”作为借口       ➡️ 重新调整状态并失去当日特权 (Reset & Lose Daily Privileges)\n"
-        f"```\n\n"
-        f"### ✅ **【5要：获得树叶与 Free Time 的正向行为 / The 5 'Dos': Earn Leaves & Free Time】**\n"
-        f"```yaml\n"
-        f" 1. 要自我觉察：主动调整情绪与状态 (Badmood自愈) ➡️ 获得树叶 +1 (Earn Leaf +1)\n"
-        f" 2. 要积极提神：保持清醒与活力 (洗脸/振作精神)   ➡️ 获得树叶 +1 (Earn Leaf +1)\n"
-        f" 3. 要维护空间：遵守座位与秩序 (专注做好本分)     ➡️ 获得团队甘露 ++ (Earn Team Dew ++)\n"
-        f" 4. 要承担成长：不找借口，勇敢面对学习与挑战     ➡️ 解锁专属里程碑 (Unlock Growth Milestones)\n"
-        f" 5. 要互助共荣：与同伴守护花园，累积 30 片叶子  ➡️ 解锁大树与大奖！(Unlock Big Tree & Grand Reward)\n"
-        f"```\n"
-        f"📌 **温馨提示 / Note：自由与特权是由自律和负责任换来的，随时查看，做自己的主人！(Freedom & privileges are earned through self-discipline. Be your own master!)**"
+    """分段发送大字卡片，英文绝对主导，彻底杜绝借口"""
+    
+    # 卡片 1：总契约大标题
+    await ctx.send(
+        f"# 📜 GARDEN RULES & GROWTH CONTRACT\n"
+        f"> **Make independent choices. Take responsibility for your space & freedom.**\n"
+        f"> *（中文总则：自主选择，为自己的空间与自由负责）*"
     )
-    await ctx.send(rules_view)
+    
+    # 卡片 2：3不（红色警示，英文超大字，华语缩小做对比）
+    await ctx.send(
+        f"## ❌ THE 3 'DON'TS' (Lose Leaves & Free Time)\n"
+        f"### **1. Do not leave your seat randomly**\n"
+        f"👉 *Result: Lose Leaves & Free Time Freeze* | *(中文：随意过位 ➡️ 扣树叶 & 冻结自由)*\n\n"
+        f"### **2. Do not avoid emotions or waste focus time**\n"
+        f"👉 *Result: Lose Leaves & Affect Team Dew* | *(中文：逃避情绪 ➡️ 扣树叶 & 影响团队)*\n\n"
+        f"### **3. Do not make excuses like 'I don't understand'**\n"
+        f"👉 *Result: Reset state & Lose daily privileges* | *(中文：拒绝借口 ➡️ 失去当日特权)*"
+    )
+    
+    # 卡片 3：5要（绿色正向，英文超大字）
+    await ctx.send(
+        f"## ✅ THE 5 'DOS' (Earn Leaves & Free Time)\n"
+        f"### **1. Self-Awareness:** Adjust your mood proactively ➡️ **Earn Leaf +1** *(主动调整情绪)*\n"
+        f"### **2. Energy Boost:** Wash your face and stay fresh ➡️ **Earn Leaf +1** *(保持清醒提神)*\n"
+        f"### **3. Space Respect:** Keep your seat and order ➡️ **Earn Team Dew ++** *(维护空间秩序)*\n"
+        f"### **4. Responsibility:** Face challenges without excuses ➡️ **Unlock Milestones** *(勇敢承担成长)*\n"
+        f"### **5. Teamwork:** Protect the garden together (30 Leaves) ➡️ **Unlock Big Tree & Grand Prize!** *(互助共荣大奖)*"
+    )
 
 if __name__ == "__main__":
     t = threading.Thread(target=run_web)
