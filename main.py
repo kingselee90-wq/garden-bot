@@ -20,7 +20,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (双语 + 长期两个月累积版)
+# 🌳 共融花园守护兽系统 (双通道分离版)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -33,6 +33,9 @@ if gemini_api_key:
     ai_client = genai.Client(api_key=gemini_api_key)
 
 student_data = {}
+
+# 专门指定储存数据的频道名称
+ARCHIVE_CHANNEL_NAME = "garden-database"
 
 def parse_message(content):
     try:
@@ -99,48 +102,57 @@ def parse_message(content):
         print(f"解析出错: {e}")
         return None, None, None, None
 
-async def save_data_to_discord(channel):
-    """后台静默更新云端存档（保证两个月数据连续不丢失）"""
+async def save_data_to_database_channel(guild):
+    """自动寻找并锁定 #garden-database 频道，将所有数据打包备份在这里"""
     try:
         data_str = json.dumps(student_data, ensure_ascii=False)
-        async for message in channel.history(limit=20):
-            if message.author == bot.user and "[GARDEN_ARCHIVE_DATA]" in message.content:
-                await message.edit(content=f"📂 **[GARDEN_ARCHIVE_DATA - LONG TERM BACKUP]**\n```{data_str}```")
+        target_channel = None
+        
+        for channel in guild.text_channels:
+            if channel.name == ARCHIVE_CHANNEL_NAME:
+                target_channel = channel
+                break
+                
+        if not target_channel:
+            return
+            
+        # 寻找已有的存档消息进行更新，如果没有则发一条新消息
+        async for message in target_channel.history(limit=20):
+            if message.author == bot.user and "[GARDEN_DATABASE_BACKUP]" in message.content:
+                await message.edit(content=f"📂 **[GARDEN_DATABASE_BACKUP - SYSTEM ARCHIVE]**\n```{data_str}```")
                 return
-        await channel.send(f"📂 **[GARDEN_ARCHIVE_DATA - LONG TERM BACKUP]**\n```{data_str}```")
+                
+        await target_channel.send(f"📂 **[GARDEN_DATABASE_BACKUP - SYSTEM ARCHIVE]**\n```{data_str}```")
     except Exception as e:
-        print(f"存档更新失败: {e}")
+        print(f"数据库频道存档失败: {e}")
 
-async def load_data_from_discord(channel):
-    """启动时从频道读取历史存档，实现长期连续累计"""
+async def load_data_from_guild(guild):
+    """启动时从 #garden-database 读取历史长期存档"""
     global student_data
     try:
-        async for message in channel.history(limit=50):
-            if message.author == bot.user and "[GARDEN_ARCHIVE_DATA]" in message.content:
-                content = message.content
-                json_start = content.find("```") + 3
-                json_end = content.rfind("```")
-                if json_start != -1 and json_end != -1:
-                    json_str = content[json_start:json_end].replace("json", "").strip()
-                    student_data = json.loads(json_str)
-                    print(f"✅ 成功从云端恢复长期连续数据：{student_data}")
-                    break
+        for channel in guild.text_channels:
+            if channel.name == ARCHIVE_CHANNEL_NAME:
+                async for message in channel.history(limit=50):
+                    if message.author == bot.user and "[GARDEN_DATABASE_BACKUP]" in message.content:
+                        content = message.content
+                        json_start = content.find("```") + 3
+                        json_end = content.rfind("```")
+                        if json_start != -1 and json_end != -1:
+                            json_str = content[json_start:json_end].replace("json", "").strip()
+                            student_data = json.loads(json_str)
+                            print(f"✅ 成功从 #{ARCHIVE_CHANNEL_NAME} 恢复数据：{student_data}")
+                            return
+                break
     except Exception as e:
-        print(f"⚠️ 读取存档错误: {e}")
+        print(f"⚠️ 读取数据库频道错误: {e}")
 
 @bot.event
 async def on_ready():
     print(f"==========================================")
-    print(f" 🌳 长期连续花园系统已成功启动：{bot.user.name}")
+    print(f" 🌳 专属数据库管理系统已启动：{bot.user.name}")
     print(f"==========================================")
     for guild in bot.guilds:
-        for channel in guild.text_channels:
-            try:
-                if channel.permissions_for(guild.me).read_message_history:
-                    await load_data_from_discord(channel)
-                    break
-            except:
-                continue
+        await load_data_from_guild(guild)
 
 @bot.event
 async def on_message(message):
@@ -193,7 +205,8 @@ async def on_message(message):
                     f"> 💬 *中文：{name}表现优秀【{title_str}】！个人 +1 树叶 | 总叶数: {leaves}*"
                 )
 
-            await save_data_to_discord(message.channel)
+            # 自动同步更新到 #garden-database 专属数据库频道
+            await save_data_to_database_channel(message.guild)
             return
 
         if "badmood" in content.lower():
@@ -209,25 +222,24 @@ async def on_message(message):
 
 @bot.command(name="status")
 async def garden_status(ctx):
-    await ctx.send(f"🌳 **[GARDEN STATUS / 长期连续花园状态]**\n🟢 **System Online | 两个月长期积分连续累积模式已开启**")
+    await ctx.send(f"🌳 **[GARDEN STATUS]**\n🟢 **System Online | 专属数据库频道 [{ARCHIVE_CHANNEL_NAME}] 已绑定**")
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
     await ctx.send(
-        f"📜 **[CLASS RULES & CONTRACT / 长期积分规则]**\n"
+        f"📜 **[CLASS RULES & CONTRACT]**\n"
         f"❌ **扣分词:** `吵闹`、`过位`、`打架`、`功课/拖`、`情绪/欺骗`\n"
         f"✅ **加分词:** `喝水`、`小睡`、`帮忙`、`尊重`、`安静`\n"
-        f"📊 **指令:** 输入 `!summary` 查看当前两个月总积分榜，输入 `!reset` 仅在两个月结束后彻底清空。"
+        f"📊 **指令:** 输入 `!summary` 查看长期积分榜。"
     )
 
 @bot.command(name="summary")
 async def garden_summary(ctx):
-    """随时查看长期的全班总成绩榜单"""
     if not student_data:
-        await ctx.send("📊 **[LONG-TERM SUMMARY / 长期积分榜]**\n> 暂无学生积分数据 / No student data yet.")
+        await ctx.send("📊 **[LONG-TERM SUMMARY]**\n> 暂无学生积分数据 / No student data yet.")
         return
         
-    report = "📊 **[LONG-TERM GARDEN LEADERBOARD / 两个月长期积分排行榜]**\n━━━━━━━━━━━━━━━━━━━\n"
+    report = "📊 **[GARDEN LEADERBOARD / 长期积分排行榜]**\n━━━━━━━━━━━━━━━━━━━\n"
     for name, leaves in sorted(student_data.items(), key=lambda x: x[1], reverse=True):
         if leaves <= 10:
             status = "🌱 幼苗"
@@ -242,14 +254,13 @@ async def garden_summary(ctx):
 
 @bot.command(name="reset")
 async def garden_reset(ctx):
-    """只有在两个月结束、要开始新学期时，才使用此指令清空"""
     global student_data
     student_data.clear()
-    await save_data_to_discord(ctx.channel)
+    await save_data_to_database_channel(ctx.guild)
     await ctx.send(
-        f"🔄 **[TERM RESET / 新学期完全重置]**\n"
-        f"> **All long-term data cleared! Ready for the new term!**\n"
-        f"> *（中文：两个月长期数据已清空，准备迎接新学期！）*"
+        f"🔄 **[TERM RESET / 完全重置]**\n"
+        f"> **All data cleared and synced to database!**\n"
+        f"> *（中文：所有长期数据已清空并同步至数据库频道！）*"
     )
 
 if __name__ == "__main__":
