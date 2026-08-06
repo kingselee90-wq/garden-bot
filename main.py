@@ -20,7 +20,7 @@ def run_web():
     app.run(host="0.0.0.0", port=port)
 
 # ==========================================
-# 🌳 共融花园守护兽系统 (双语全景版)
+# 🌳 共融花园守护兽系统 (双语 + 长期两个月累积版)
 # ==========================================
 intents = discord.Intents.default()
 intents.message_content = True
@@ -35,11 +35,9 @@ if gemini_api_key:
 student_data = {}
 
 def parse_message(content):
-    """超安全解析：双语标签与精准名字提取"""
     try:
         content_lower = content.lower()
         
-        # ❌ 违规核心词及对应的英文说明
         violation_map = {
             "吵闹": ("Noise / 吵闹", "Making noise"),
             "过位": ("Wandering / 走过位", "Wandering around"),
@@ -51,7 +49,6 @@ def parse_message(content):
             "欺骗": ("Dishonesty / 不诚实", "Dishonesty")
         }
         
-        # ✅ 正向核心词及对应的英文说明
         positive_map = {
             "喝水": ("Stay Hydrated / 保持喝水", "Drinking water"),
             "小睡": ("Pre-class Nap / 课前小睡", "Taking a nap"),
@@ -67,7 +64,6 @@ def parse_message(content):
         is_violation = True
         action_info = None
 
-        # 检查违规词
         for kw, info in violation_map.items():
             if kw in content_lower:
                 matched_key = kw
@@ -75,7 +71,6 @@ def parse_message(content):
                 is_violation = True
                 break
                 
-        # 检查正向词
         if not matched_key:
             for kw, info in positive_map.items():
                 if kw in content_lower:
@@ -87,7 +82,6 @@ def parse_message(content):
         if not matched_key:
             return None, None, None, None
 
-        # 提取纯名字：把核心词和多余的口语修饰词洗掉
         name = content
         all_keywords = list(violation_map.keys()) + list(positive_map.keys())
         for kw in all_keywords:
@@ -102,23 +96,23 @@ def parse_message(content):
 
         return name, matched_key, action_info, is_violation
     except Exception as e:
-        print(f"解析出错（已自动拦截）: {e}")
+        print(f"解析出错: {e}")
         return None, None, None, None
 
 async def save_data_to_discord(channel):
-    """后台静默更新云端存档（不刷屏）"""
+    """后台静默更新云端存档（保证两个月数据连续不丢失）"""
     try:
         data_str = json.dumps(student_data, ensure_ascii=False)
         async for message in channel.history(limit=20):
             if message.author == bot.user and "[GARDEN_ARCHIVE_DATA]" in message.content:
-                await message.edit(content=f"📂 **[GARDEN_ARCHIVE_DATA - SYSTEM BACKUP]**\n```{data_str}```")
+                await message.edit(content=f"📂 **[GARDEN_ARCHIVE_DATA - LONG TERM BACKUP]**\n```{data_str}```")
                 return
-        await channel.send(f"📂 **[GARDEN_ARCHIVE_DATA - SYSTEM BACKUP]**\n```{data_str}```")
+        await channel.send(f"📂 **[GARDEN_ARCHIVE_DATA - LONG TERM BACKUP]**\n```{data_str}```")
     except Exception as e:
         print(f"存档更新失败: {e}")
 
 async def load_data_from_discord(channel):
-    """启动时从频道读取存档"""
+    """启动时从频道读取历史存档，实现长期连续累计"""
     global student_data
     try:
         async for message in channel.history(limit=50):
@@ -129,7 +123,7 @@ async def load_data_from_discord(channel):
                 if json_start != -1 and json_end != -1:
                     json_str = content[json_start:json_end].replace("json", "").strip()
                     student_data = json.loads(json_str)
-                    print(f"✅ 成功从 Discord 恢复数据：{student_data}")
+                    print(f"✅ 成功从云端恢复长期连续数据：{student_data}")
                     break
     except Exception as e:
         print(f"⚠️ 读取存档错误: {e}")
@@ -137,7 +131,7 @@ async def load_data_from_discord(channel):
 @bot.event
 async def on_ready():
     print(f"==========================================")
-    print(f" 🌳 守护兽花圃系统已成功启动：{bot.user.name}")
+    print(f" 🌳 长期连续花园系统已成功启动：{bot.user.name}")
     print(f"==========================================")
     for guild in bot.guilds:
         for channel in guild.text_channels:
@@ -155,16 +149,12 @@ async def on_message(message):
 
     try:
         content = message.content.strip()
-        
         name, keyword, action_info, is_violation = parse_message(content)
 
         if name and action_info:
             title_str, desc_en = action_info
             
             if is_violation:
-                # ------------------------------------------
-                # ❌ 违规扣除树叶（双语提示）
-                # ------------------------------------------
                 current_leaves = student_data.get(name, 0)
                 new_leaves = max(0, current_leaves - 1)
                 student_data[name] = new_leaves
@@ -181,13 +171,10 @@ async def on_message(message):
                     f"> **{name} — {title_str}**\n"
                     f"> 🔻 **Lose 1 Leaf (-1 Leaf)** 🍃 Total Leaves: **{new_leaves}**\n"
                     f"> 🌲 Growth Status: **{tree_status}**\n"
-                    f"> 💬 *English: {name}, {desc_en}. You lost 1 leaf. Total leaves: {new_leaves}.*\n"
+                    f"> 💬 *English: {name}, {desc_en}. Total leaves: {new_leaves}.*\n"
                     f"> 💬 *中文：{name}【{title_str}】！扣除 1 片树叶 | 目前总叶数: {new_leaves}*"
                 )
             else:
-                # ------------------------------------------
-                # ✅ 正向增加树叶（双语提示）
-                # ------------------------------------------
                 student_data[name] = student_data.get(name, 0) + 1
                 leaves = student_data[name]
                 
@@ -202,7 +189,7 @@ async def on_message(message):
                     f"✨ **[{title_str.upper()}]**\n"
                     f"> **{name}, great job! (+1 Leaf)** 🍃 Total Leaves: **{leaves}**\n"
                     f"> 🌲 Growth Status: **{tree_status}**\n"
-                    f"> 💬 *English: Great job, {name}! ({desc_en}) You earned +1 leaf. Total leaves: {leaves}.*\n"
+                    f"> 💬 *English: Great job, {name}! Total leaves: {leaves}.*\n"
                     f"> 💬 *中文：{name}表现优秀【{title_str}】！个人 +1 树叶 | 总叶数: {leaves}*"
                 )
 
@@ -218,28 +205,51 @@ async def on_message(message):
 
         await bot.process_commands(message)
     except Exception as e:
-        print(f"处理消息时发生异常（已安全拦截）: {e}")
+        print(f"处理消息异常: {e}")
 
 @bot.command(name="status")
 async def garden_status(ctx):
-    await ctx.send(f"🌳 **[GARDEN STATUS / 花园状态]**\n🟢 **System Online | Bilingual Mode Active (双语模式已开启)**")
+    await ctx.send(f"🌳 **[GARDEN STATUS / 长期连续花园状态]**\n🟢 **System Online | 两个月长期积分连续累积模式已开启**")
 
 @bot.command(name="rules")
 async def garden_rules(ctx):
     await ctx.send(
-        f"📜 **[CLASS RULES & CONTRACT / 课室纪律与契约]**\n"
-        f"❌ **三不扣分词 / Deductions:** `吵闹(Noise)`、`过位(Wandering)`、`打架(Fighting)`、`功课/拖(Homework)`、`情绪/欺骗(Emotions/Dishonesty)`\n"
-        f"✅ **五要加分词 / Rewards:** `喝水(Hydrated)`、`小睡(Nap)`、`帮忙(Help)`、`尊重(Respect)`、`安静(Quiet)`"
+        f"📜 **[CLASS RULES & CONTRACT / 长期积分规则]**\n"
+        f"❌ **扣分词:** `吵闹`、`过位`、`打架`、`功课/拖`、`情绪/欺骗`\n"
+        f"✅ **加分词:** `喝水`、`小睡`、`帮忙`、`尊重`、`安静`\n"
+        f"📊 **指令:** 输入 `!summary` 查看当前两个月总积分榜，输入 `!reset` 仅在两个月结束后彻底清空。"
     )
+
+@bot.command(name="summary")
+async def garden_summary(ctx):
+    """随时查看长期的全班总成绩榜单"""
+    if not student_data:
+        await ctx.send("📊 **[LONG-TERM SUMMARY / 长期积分榜]**\n> 暂无学生积分数据 / No student data yet.")
+        return
+        
+    report = "📊 **[LONG-TERM GARDEN LEADERBOARD / 两个月长期积分排行榜]**\n━━━━━━━━━━━━━━━━━━━\n"
+    for name, leaves in sorted(student_data.items(), key=lambda x: x[1], reverse=True):
+        if leaves <= 10:
+            status = "🌱 幼苗"
+        elif leaves < 30:
+            status = "🌿 成长"
+        else:
+            status = "🌳 大树"
+        report += f"• **{name}**: 🍃 {leaves} leaves ({status})\n"
+    
+    report += "━━━━━━━━━━━━━━━━━━━\n✨ *Keep growing! / 继续加油成长！*"
+    await ctx.send(report)
 
 @bot.command(name="reset")
 async def garden_reset(ctx):
+    """只有在两个月结束、要开始新学期时，才使用此指令清空"""
     global student_data
     student_data.clear()
     await save_data_to_discord(ctx.channel)
     await ctx.send(
-        f"🔄 **[GARDEN ARCHIVE RESET / 云端存档重置]**\n"
-        f"> **All student data reset successfully! / 所有学生数据已成功清空重置！**"
+        f"🔄 **[TERM RESET / 新学期完全重置]**\n"
+        f"> **All long-term data cleared! Ready for the new term!**\n"
+        f"> *（中文：两个月长期数据已清空，准备迎接新学期！）*"
     )
 
 if __name__ == "__main__":
