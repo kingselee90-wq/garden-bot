@@ -1,7 +1,7 @@
 import os
 import discord
 from discord.ext import commands
-import google.generativeai as genai
+from google import genai
 
 # ==================== 配置区 ====================
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
