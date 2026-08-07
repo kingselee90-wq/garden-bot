@@ -21,7 +21,6 @@ def keep_alive():
 
 # ==================== 配置区 ====================
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-# 已自动填入你刚才提供的 #garden-database 频道 ID
 DATABASE_CHANNEL_ID = 1534749623988519105
 
 # 初始化 Discord Bot
@@ -34,7 +33,9 @@ CLASS_DATA = {
     "美燕": {"leaves": 0, "trees": 0, "avatar": "🐱", "custom_pet": "🐱"},
     "浩安": {"leaves": 0, "trees": 0, "avatar": "🐶", "custom_pet": "🐶"},
     "伟杰": {"leaves": 0, "trees": 0, "avatar": "🐼", "custom_pet": "🐼"},
-    "慧玫": {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"}
+    "慧玫": {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"},
+    "俓轩": {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"},
+    "巫迪": {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"}
 }
 
 GUARDIAN_DATA = {
@@ -59,9 +60,7 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
-    # 兼容两种输入格式：
-    # 1. 名字 + 数字 + 原因 (例如: 慧玫 3 完成功课)
-    # 2. 名字 + 原因 + 数字 (例如: 俓轩 完成功课 3 或 巫迪 讲骗话 -1)
+    # 兼容所有习惯的正则（无论数字带不带 + 号、在中间还是最后）
     match_a = re.match(r'^([\u4e00-\u9fa5\w]+)\s+([+-]?\d+)\s+(.+)$', content)
     match_b = re.match(r'^([\u4e00-\u9fa5\w]+)\s+(.+?)\s+([+-]?\d+)$', content)
     
