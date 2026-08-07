@@ -21,6 +21,8 @@ def keep_alive():
 
 # ==================== 配置区 ====================
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+# 已自动填入你刚才提供的 #garden-database 频道 ID
+DATABASE_CHANNEL_ID = 1534749623988519105
 
 # 初始化 Discord Bot
 intents = discord.Intents.default()
@@ -45,7 +47,7 @@ GUARDIAN_DATA = {
 async def on_ready():
     print(f"🌳 园丁守护兽系统已成功启动，当前登录账号：{bot.user}")
 
-# ==================== 免 "!" 自然语言监听区 ====================
+# ==================== 免 "!" 自然语言监听与数据收集区 ====================
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -57,6 +59,9 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
+    # 兼容两种输入格式：
+    # 1. 名字 + 数字 + 原因 (例如: 慧玫 3 完成功课)
+    # 2. 名字 + 原因 + 数字 (例如: 俓轩 完成功课 3 或 巫迪 讲骗话 -1)
     match_a = re.match(r'^([\u4e00-\u9fa5\w]+)\s+([+-]?\d+)\s+(.+)$', content)
     match_b = re.match(r'^([\u4e00-\u9fa5\w]+)\s+(.+?)\s+([+-]?\d+)$', content)
     
@@ -89,6 +94,7 @@ async def on_message(message):
         if student["trees"] > 0:
             student["avatar"] = student["custom_pet"]
 
+        # 制作精美嵌入式卡片
         embed = discord.Embed(
             title="🌿 安亲班树叶成长记录 | Garden Progress",
             color=discord.Color.green()
@@ -105,7 +111,15 @@ async def on_message(message):
             embed.add_field(name="🎉 升级喜讯 (Level Up!)", value=f"恭喜 **{name}** 成功长出新大树，并解锁专属宠物头像！", inline=False)
 
         embed.set_footer(text="Garden Keeper Bot • 守护您的每一个教学瞬间")
+        
+        # 1. 在当前互动频道发送卡片
         await message.channel.send(embed=embed)
+        
+        # 2. 自动同步备份到 #garden-database 数据频道
+        db_channel = bot.get_channel(DATABASE_CHANNEL_ID)
+        if db_channel:
+            await db_channel.send(embed=embed)
+            
         return
 
     await bot.process_commands(message)
