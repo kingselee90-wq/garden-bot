@@ -1,51 +1,3 @@
-import os
-import re
-import discord
-from discord.ext import commands
-from flask import Flask
-from threading import Thread
-
-# ==================== 网页保活配置 (防止Render休眠) ====================
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Garden Keeper Bot is running!"
-
-def run():
-    app.run(host='0.0.0.0', port=10000)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-# ==================== 配置区 ====================
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-
-# 初始化 Discord Bot
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-# ==================== 核心学生数据结构 ====================
-# 今天正式清空，作为全新数据库起点
-CLASS_DATA = {
-    "美燕": {"leaves": 0, "trees": 0, "avatar": "🐱", "custom_pet": "🐱"},
-    "浩安": {"leaves": 0, "trees": 0, "avatar": "🐶", "custom_pet": "🐶"},
-    "伟杰": {"leaves": 0, "trees": 0, "avatar": "🐼", "custom_pet": "🐼"},
-    "慧玫": {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"}
-}
-
-GUARDIAN_DATA = {
-    "health": 100,
-    "today_leaves": 0,
-    "status": "💚 健康/Thriving"
-}
-
-@bot.event
-async def on_ready():
-    print(f"🌳 园丁守护兽系统已成功启动，当前登录账号：{bot.user}")
-
 # ==================== 免 "!" 自然语言监听区 ====================
 @bot.event
 async def on_message(message):
@@ -59,14 +11,24 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
-    # 自然语言匹配：例如 "慧玫 3 完成功课" 或 "美燕 +3"
-    match = re.match(r'^([\u4e00-\u9fa5\w]+)\s*([+-]?\d+)\s*(.*)$', content)
+    # 兼容两种习惯的正则匹配：
+    # 方案 A: 名字 + 数字 + 原因 (例如: 慧玫 3 完成功课)
+    # 方案 B: 名字 + 原因 + 数字 (例如: 俓轩 完成功课 3 或 巫迪 讲骗话 -1)
+    match_a = re.match(r'^([\u4e00-\u9fa5\w]+)\s+([+-]?\d+)\s+(.+)$', content)
+    match_b = re.match(r'^([\u4e00-\u9fa5\w]+)\s+(.+?)\s+([+-]?\d+)$', content)
     
-    if match:
-        name = match.group(1)
-        leaves_change = int(match.group(2))
-        reason = match.group(3) if match.group(3) else "日常表现"
+    name, leaves_change, reason = None, None, "日常表现"
 
+    if match_a:
+        name = match_a.group(1)
+        leaves_change = int(match_a.group(2))
+        reason = match_a.group(3)
+    elif match_b:
+        name = match_b.group(1)
+        reason = match_b.group(2)
+        leaves_change = int(match_b.group(3))
+
+    if name and leaves_change is not None:
         if name not in CLASS_DATA:
             CLASS_DATA[name] = {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"}
 
@@ -92,7 +54,7 @@ async def on_message(message):
             color=discord.Color.green()
         )
         embed.add_field(name="学生 (Student)", value=f"{student['avatar']} **{name}**", inline=True)
-        embed.add_field(name="叶子变动 (Leaves)", value=f"`+{leaves_change}` 🍃", inline=True)
+        embed.add_field(name="叶子变动 (Leaves)", value=f"`{'+' if leaves_change > 0 else ''}{leaves_change}` 🍃", inline=True)
         embed.add_field(name="表现事迹 (Activity)", value=reason, inline=False)
         
         progress_bar = "█" * student["leaves"] + "░" * (20 - student["leaves"])
@@ -107,66 +69,3 @@ async def on_message(message):
         return
 
     await bot.process_commands(message)
-
-# ==================== 辅助与管理指令区 ====================
-
-@bot.command(name="guardian")
-async def guardian_status(ctx):
-    """查看守护兽状态"""
-    embed = discord.Embed(
-        title="🐾 班级守护兽状态 | Guardian Spirit",
-        color=discord.Color.blue()
-    )
-    embed.add_field(name="健康指数 (Health Level)", value=f"❤️ **{GUARDIAN_DATA['health']}%** ({GUARDIAN_DATA['status']})", inline=False)
-    embed.add_field(name="今日核心叶子总数 (Today's Total Leaves)", value=f"🍃 **{GUARDIAN_DATA['today_leaves']} / 30 片**", inline=False)
-    embed.set_footer(text="守护兽随着全班表现共同成长！")
-    await ctx.send(embed=embed)
-
-@bot.command(name="summary")
-async def class_summary(ctx):
-    """查看全班排行榜"""
-    embed = discord.Embed(
-        title="📊 安亲班总排行榜 | Class Leaderboard",
-        color=discord.Color.gold()
-    )
-    
-    for name, data in CLASS_DATA.items():
-        embed.add_field(
-            name=f"{data['avatar']} {name}",
-            value=f"🌳 大树: **{data['trees']}** 棵 | 🍃 现有叶子: **{data['leaves']}** /20",
-            inline=False
-        )
-        
-    embed.set_footer(text="品学兼优，绿意盎然！")
-    await ctx.send(embed=embed)
-
-@bot.command(name="setpet")
-async def set_pet(ctx, name: str, pet_emoji: str):
-    """设置专属宠物头像: 输入 !setpet 美燕 🦊"""
-    if name in CLASS_DATA:
-        CLASS_DATA[name]["custom_pet"] = pet_emoji
-        if CLASS_DATA[name]["trees"] > 0:
-            CLASS_DATA[name]["avatar"] = pet_emoji
-        await ctx.send(f"✨ 成功为 **{name}** 设置专属大树宠物头像：{pet_emoji}")
-    else:
-        await ctx.send(f"⚠️ 找不到学生：{name}")
-
-@bot.command(name="reset")
-async def reset_database(ctx, confirm: str = ""):
-    """
-    重置数据库指令：必须输入 !reset YES 才会清空，防止误触！
-    """
-    if confirm == "YES":
-        for name in CLASS_DATA:
-            CLASS_DATA[name]["leaves"] = 0
-            CLASS_DATA[name]["trees"] = 0
-        GUARDIAN_DATA["today_leaves"] = 0
-        await ctx.send("🔄 **【系统提示】数据库已成功清空！今天是全新的一天，所有同学叶子和大树已归零。**")
-    else:
-        await ctx.send("⚠️ **安全提示：** 清空数据库需要输入 `!reset YES`，避免不小心删掉数据哦！")
-
-# 启动网页保活
-keep_alive()
-
-# 运行机器人
-bot.run(DISCORD_TOKEN)
