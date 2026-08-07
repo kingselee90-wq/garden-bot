@@ -28,12 +28,12 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ==================== 核心学生数据结构 ====================
-# avatar: 默认头像, trees: 大树数, leaves: 当前叶子数(满20变大树)
-# 拥有专属卡通头像设定：大树数量>=1即可解锁/替换专属宠物
+# 今天正式清空，作为全新数据库起点
 CLASS_DATA = {
     "美燕": {"leaves": 0, "trees": 0, "avatar": "🐱", "custom_pet": "🐱"},
     "浩安": {"leaves": 0, "trees": 0, "avatar": "🐶", "custom_pet": "🐶"},
-    "伟杰": {"leaves": 0, "trees": 0, "avatar": "🐼", "custom_pet": "🐼"}
+    "伟杰": {"leaves": 0, "trees": 0, "avatar": "🐼", "custom_pet": "🐼"},
+    "慧玫": {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"}
 }
 
 GUARDIAN_DATA = {
@@ -49,19 +49,17 @@ async def on_ready():
 # ==================== 免 "!" 自然语言监听区 ====================
 @bot.event
 async def on_message(message):
-    # 避免机器人自己回复自己陷入死循环
     if message.author == bot.user:
         return
 
     content = message.content.strip()
 
-    # 1. 如果是标准的 ! 指令，交由下面的 commands 处理
+    # 如果是标准的 ! 指令，交由下面的 commands 处理
     if content.startswith("!"):
         await bot.process_commands(message)
         return
 
-    # 2. 自然语言匹配：例如 "美燕 3 完成功课" 或 "美燕 +3 做功课"
-    # 正则表达式匹配格式：名字 [空格] +/-数字 [空格可选] 事迹
+    # 自然语言匹配：例如 "慧玫 3 完成功课" 或 "美燕 +3"
     match = re.match(r'^([\u4e00-\u9fa5\w]+)\s*([+-]?\d+)\s*(.*)$', content)
     
     if match:
@@ -70,7 +68,6 @@ async def on_message(message):
         reason = match.group(3) if match.group(3) else "日常表现"
 
         if name not in CLASS_DATA:
-            # 如果新学生自动注册，默认给个 ⭐ 头像
             CLASS_DATA[name] = {"leaves": 0, "trees": 0, "avatar": "⭐", "custom_pet": "⭐"}
 
         student = CLASS_DATA[name]
@@ -85,7 +82,7 @@ async def on_message(message):
             student["leaves"] = student["leaves"] % 20
             tree_leveled_up = True
 
-        # 如果长出第一棵大树或以上，自动应用专属宠物头像！
+        # 如果长出大树，自动应用专属宠物头像
         if student["trees"] > 0:
             student["avatar"] = student["custom_pet"]
 
@@ -109,26 +106,25 @@ async def on_message(message):
         await message.channel.send(embed=embed)
         return
 
-    # 其他消息正常处理
     await bot.process_commands(message)
 
-# ==================== 辅助管理指令区 ====================
+# ==================== 辅助与管理指令区 ====================
 
 @bot.command(name="guardian")
 async def guardian_status(ctx):
-    """查看守护兽状态: 输入 !guardian"""
+    """查看守护兽状态"""
     embed = discord.Embed(
         title="🐾 班级守护兽状态 | Guardian Spirit",
         color=discord.Color.blue()
     )
     embed.add_field(name="健康指数 (Health Level)", value=f"❤️ **{GUARDIAN_DATA['health']}%** ({GUARDIAN_DATA['status']})", inline=False)
-    embed.add_field(name="今日核心叶子总数 (Today's Total Leaves)", value=f"🍃 **{GUARDIAN_DATA['today_leaves']} / 30 片** (目标: 核心10人达标)", inline=False)
+    embed.add_field(name="今日核心叶子总数 (Today's Total Leaves)", value=f"🍃 **{GUARDIAN_DATA['today_leaves']} / 30 片**", inline=False)
     embed.set_footer(text="守护兽随着全班表现共同成长！")
     await ctx.send(embed=embed)
 
 @bot.command(name="summary")
 async def class_summary(ctx):
-    """查看全班排行榜: 输入 !summary"""
+    """查看全班排行榜"""
     embed = discord.Embed(
         title="📊 安亲班总排行榜 | Class Leaderboard",
         color=discord.Color.gold()
@@ -146,7 +142,7 @@ async def class_summary(ctx):
 
 @bot.command(name="setpet")
 async def set_pet(ctx, name: str, pet_emoji: str):
-    """为大树学生设置专属宠物头像: 输入 !setpet 美燕 🦊"""
+    """设置专属宠物头像: 输入 !setpet 美燕 🦊"""
     if name in CLASS_DATA:
         CLASS_DATA[name]["custom_pet"] = pet_emoji
         if CLASS_DATA[name]["trees"] > 0:
@@ -154,6 +150,20 @@ async def set_pet(ctx, name: str, pet_emoji: str):
         await ctx.send(f"✨ 成功为 **{name}** 设置专属大树宠物头像：{pet_emoji}")
     else:
         await ctx.send(f"⚠️ 找不到学生：{name}")
+
+@bot.command(name="reset")
+async def reset_database(ctx, confirm: str = ""):
+    """
+    重置数据库指令：必须输入 !reset YES 才会清空，防止误触！
+    """
+    if confirm == "YES":
+        for name in CLASS_DATA:
+            CLASS_DATA[name]["leaves"] = 0
+            CLASS_DATA[name]["trees"] = 0
+        GUARDIAN_DATA["today_leaves"] = 0
+        await ctx.send("🔄 **【系统提示】数据库已成功清空！今天是全新的一天，所有同学叶子和大树已归零。**")
+    else:
+        await ctx.send("⚠️ **安全提示：** 清空数据库需要输入 `!reset YES`，避免不小心删掉数据哦！")
 
 # 启动网页保活
 keep_alive()
