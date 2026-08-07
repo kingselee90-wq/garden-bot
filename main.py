@@ -1,35 +1,41 @@
 import os
 import discord
 from discord.ext import commands
-from google import genai
+from flask import Flask
+from threading import Thread
+
+# ==================== 网页保活配置 (防止Render休眠) ====================
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Garden Keeper Bot is running!"
+
+def run():
+    app.run(host='0.0.0.0', port=10000)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 # ==================== 配置区 ====================
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-# 初始化 Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-# 使用最稳定的 gemini 模型
-gemini_model = genai.GenerativeModel("gemini-2.5-flash")
 
 # 初始化 Discord Bot
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ==================== 模拟云端数据结构 ====================
-# 实际生产中可挂载数据库，这里用内存字典确保实时响应与稳定
-# 学生结构: { "名字": { "leaves": 0, "trees": 0, "avatar": "🌱", "history": [] } }
+# ==================== 核心数据结构 ====================
 CLASS_DATA = {
-    "美燕": {"leaves": 0, "trees": 0, "avatar": "🐱", "status": "active"},
-    "浩安": {"leaves": 0, "trees": 0, "avatar": "🐶", "status": "active"},
-    "伟杰": {"leaves": 0, "trees": 0, "avatar": "🐼", "status": "active"}
+    "美燕": {"leaves": 0, "trees": 0, "avatar": "🐱"},
+    "浩安": {"leaves": 0, "trees": 0, "avatar": "🐶"},
+    "伟杰": {"leaves": 0, "trees": 0, "avatar": "🐼"}
 }
 
-# 守护兽数据
 GUARDIAN_DATA = {
-    "health": 100,      # 健康值 0-100
-    "today_leaves": 0,  # 今日核心10人累积叶子
+    "health": 100,
+    "today_leaves": 0,
     "status": "💚 健康/Thriving"
 }
 
@@ -45,7 +51,7 @@ async def add_score(ctx, name: str, leaves: int, *, reason: str = "日常表现"
     加分指令格式: !add 美燕 3 完成功课
     """
     if name not in CLASS_DATA:
-        CLASS_DATA[name] = {"leaves": 0, "trees": 0, "avatar": "⭐", "status": "active"}
+        CLASS_DATA[name] = {"leaves": 0, "trees": 0, "avatar": "⭐"}
     
     student = CLASS_DATA[name]
     student["leaves"] += leaves
@@ -55,10 +61,10 @@ async def add_score(ctx, name: str, leaves: int, *, reason: str = "日常表现"
     tree_leveled_up = False
     if student["leaves"] >= 20:
         student["trees"] += student["leaves"] // 20
-        student["leaves"] = student["leaves"] % 20  # 剩下多余的叶子
+        student["leaves"] = student["leaves"] % 20
         tree_leveled_up = True
 
-    # 制作精美嵌入式卡片 (Embed) 呈现五彩缤纷的视觉效果
+    # 制作精美嵌入式卡片
     embed = discord.Embed(
         title="🌿 安亲班树叶成长记录 | Garden Progress",
         color=discord.Color.green()
@@ -110,6 +116,9 @@ async def class_summary(ctx):
         
     embed.set_footer(text="品学兼优，绿意盎然！")
     await ctx.send(embed=embed)
+
+# 启动网页保活
+keep_alive()
 
 # 运行机器人
 bot.run(DISCORD_TOKEN)
